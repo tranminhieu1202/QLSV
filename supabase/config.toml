@@ -1,0 +1,64 @@
+# Cấu hình Supabase local cho project qlgd_edu.
+# Nếu CLI báo lỗi khóa lạ (do khác phiên bản), chạy `supabase init` để sinh file
+# mới rồi thêm lại các mục [functions.*] bên dưới.
+
+project_id = "qlgd_edu"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["https://127.0.0.1:3000"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Tắt xác nhận email để tài khoản seed / tạo mới đăng nhập được ngay.
+enable_confirmations = false
+
+# Các Edge Function đều yêu cầu JWT hợp lệ (app tự gửi token người đăng nhập).
+[functions.create-student]
+verify_jwt = true
+
+[functions.reset-student-password]
+verify_jwt = true
+
+[analytics]
+enabled = false

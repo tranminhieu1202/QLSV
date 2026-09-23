@@ -1,0 +1,612 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/academic.dart';
+import '../models/course.dart';
+import '../models/enrollment.dart';
+import '../models/student.dart';
+import '../models/user.dart';
+import 'academic_service.dart';
+import 'curriculum_seed.dart';
+import 'supabase_config.dart';
+
+/// Pairs a student with their computed academic progress.
+class StudentWithProgress {
+  final Student student;
+  final StudentProgress progress;
+  StudentWithProgress(this.student, this.progress);
+}
+
+class AuditEntry {
+  final String ts;
+  final String actorName;
+  final String role;
+  final String action;
+  final String detail;
+  final String? studentCode;
+  AuditEntry(this.ts, this.actorName, this.role, this.action, this.detail,
+      this.studentCode);
+  factory AuditEntry.fromMap(Map<String, Object?> m) => AuditEntry(
+        m['ts'] as String,
+        (m['actor_name'] as String?) ?? '',
+        (m['role'] as String?) ?? '',
+        m['action'] as String,
+        m['detail'] as String,
+        m['student_code'] as String?,
+      );
+}
+
+/// A single proposed edit to a student profile field.
+class ProfileChange {
+  final String field; // column name
+  final String label; // human label
+  final String? oldValue;
+  final String? newValue;
+  const ProfileChange(this.field, this.label, this.oldValue, this.newValue);
+}
+
+/// A pending profile change waiting for admin (quản trị) approval.
+class ChangeRequest {
+  final int id;
+  final int studentId;
+  final String studentCode;
+  final String studentName;
+  final String field;
+  final String fieldLabel;
+  final String? oldValue;
+  final String? newValue;
+  final String requestedBy;
+  final String requestedRole;
+  final String ts;
+  final String status;
+  ChangeRequest({
+    required this.id,
+    required this.studentId,
+    required this.studentCode,
+    required this.studentName,
+    required this.field,
+    required this.fieldLabel,
+    required this.oldValue,
+    required this.newValue,
+    required this.requestedBy,
+    required this.requestedRole,
+    required this.ts,
+    required this.status,
+  });
+  factory ChangeRequest.fromMap(Map<String, Object?> m) => ChangeRequest(
+        id: (m['id'] as num).toInt(),
+        studentId: (m['student_id'] as num).toInt(),
+        studentCode: m['student_code'] as String,
+        studentName: (m['student_name'] as String?) ?? '',
+        field: m['field'] as String,
+        fieldLabel: m['field_label'] as String,
+        oldValue: m['old_value'] as String?,
+        newValue: m['new_value'] as String?,
+        requestedBy: (m['requested_by'] as String?) ?? '',
+        requestedRole: (m['requested_role'] as String?) ?? '',
+        ts: (m['created_at'] as String?) ?? '',
+        status: m['status'] as String,
+      );
+}
+
+/// Read/write access to the Supabase (PostgreSQL) backend. RLS enforces which
+/// rows each role may touch; this layer only shapes the queries.
+class Repository {
+  Repository(this._sb);
+  final SupabaseClient _sb;
+
+  static const defaultTerm = '20261';
+
+  List<Map<String, Object?>> _rows(List<dynamic> rows) =>
+      rows.map((r) => Map<String, Object?>.from(r as Map)).toList();
+
+  // ------------------------------------------------------------------ auth
+  Future<AppUser?> login(String username, String password) async {
+    final email = SupabaseConfig.toEmail(username);
+    try {
+      final res =
+          await _sb.auth.signInWithPassword(email: email, password: password);
+      final uid = res.user?.id;
+      if (uid == null) return null;
+      final row =
+          await _sb.from('profiles').select().eq('id', uid).maybeSingle();
+      if (row == null) return null;
+      return AppUser.fromMap(Map<String, Object?>.from(row));
+    } on AuthException {
+      return null;
+    }
+  }
+
+  Future<void> signOut() => _sb.auth.signOut();
+
+  /// Người dùng hiện tại tự đổi mật khẩu của mình.
+  Future<String?> changeOwnPassword(String newPassword) async {
+    try {
+      await _sb.auth.updateUser(UserAttributes(password: newPassword));
+      return null;
+    } on AuthException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// Quản trị đặt lại mật khẩu cho một sinh viên (qua Edge Function service role).
+  Future<String?> resetStudentPassword({
+    required Student student,
+    String? newPassword,
+    required AppUser actor,
+  }) async {
+    try {
+      final res = await _sb.functions.invoke('reset-student-password', body: {
+        'studentCode': student.studentCode,
+        if (newPassword != null && newPassword.isNotEmpty)
+          'password': newPassword,
+      });
+      final data = res.data;
+      if (data is Map && data['ok'] == true) {
+        await addAudit(actor, 'Đặt lại mật khẩu',
+            'Đặt lại mật khẩu cho ${student.studentCode}',
+            studentCode: student.studentCode);
+        return null;
+      }
+      return (data is Map && data['error'] is String)
+          ? data['error'] as String
+          : 'Không đặt lại được mật khẩu.';
+    } on FunctionException catch (e) {
+      final d = e.details;
+      if (d is Map && d['error'] is String) return d['error'] as String;
+      return 'Không đặt lại được mật khẩu (lỗi máy chủ).';
+    }
+  }
+
+  // -------------------------------------------------------------- settings
+  Future<String> _get(String key, String fallback) async {
+    final row =
+        await _sb.from('settings').select('value').eq('key', key).maybeSingle();
+    return (row?['value'] as String?) ?? fallback;
+  }
+
+  Future<void> _set(String key, String value) async {
+    await _sb.from('settings').upsert({'key': key, 'value': value});
+  }
+
+  Future<String> currentTerm() => _get('current_term', defaultTerm);
+  Future<bool> regOpen() async => (await _get('reg_open', '0')) == '1';
+  Future<String?> demoStudentCode() async {
+    final v = await _get('demo_student_code', '');
+    return v.isEmpty ? null : v;
+  }
+
+  Future<void> setCurrentTerm(String term, AppUser actor) async {
+    await _set('current_term', term);
+    await addAudit(actor, 'Đổi kỳ hiện tại', 'Kỳ đăng ký hiện tại: $term');
+  }
+
+  Future<void> setRegOpen(bool open, AppUser actor) async {
+    await _set('reg_open', open ? '1' : '0');
+    final term = await currentTerm();
+    await addAudit(actor, open ? 'Mở kỳ đăng ký' : 'Đóng kỳ đăng ký',
+        'Kỳ đăng ký $term ${open ? "đã mở" : "đã đóng"}');
+  }
+
+  // -------------------------------------------------------------- students
+  Future<List<Student>> students({
+    String? advisorId,
+    String? search,
+    String? cohort,
+    String? status,
+  }) async {
+    var q = _sb.from('student_overview').select();
+    if (advisorId != null) q = q.eq('advisor_id', advisorId);
+    if (cohort != null && cohort.isNotEmpty) q = q.eq('cohort', cohort);
+    if (status != null && status.isNotEmpty) q = q.eq('status', status);
+    if (search != null && search.trim().isNotEmpty) {
+      final s = search.trim();
+      q = q.or('full_name.ilike.%$s%,student_code.ilike.%$s%');
+    }
+    final rows = await q.order('student_code');
+    return _rows(rows).map(Student.fromMap).toList();
+  }
+
+  Future<Student?> studentByCode(String code) async {
+    final row = await _sb
+        .from('student_overview')
+        .select()
+        .eq('student_code', code)
+        .maybeSingle();
+    return row == null ? null : Student.fromMap(Map<String, Object?>.from(row));
+  }
+
+  /// Danh sách cố vấn học tập để phân công cho sinh viên.
+  Future<List<AppUser>> advisors() async {
+    final rows = await _sb
+        .from('profiles')
+        .select()
+        .eq('role', 'advisor')
+        .eq('active', true)
+        .order('full_name');
+    return _rows(rows).map(AppUser.fromMap).toList();
+  }
+
+  /// Các lớp đã có, dùng để gợi ý khi thêm sinh viên mới.
+  Future<List<String>> classNames() async {
+    final rows = await _sb.from('students').select('class_name');
+    final set = <String>{
+      for (final r in rows)
+        if (r['class_name'] != null) r['class_name'] as String
+    };
+    return set.toList()..sort();
+  }
+
+  /// Sinh mã số sinh viên kế tiếp cho một năm nhập học.
+  Future<String> suggestStudentCode(int enrollYear) async {
+    final rows = await _sb
+        .from('students')
+        .select('student_code')
+        .like('student_code', '$enrollYear%')
+        .order('student_code', ascending: false)
+        .limit(1);
+    var seq = 1;
+    if (rows.isNotEmpty) {
+      final last = rows.first['student_code'] as String;
+      final tail = last.length >= 4 ? last.substring(last.length - 4) : last;
+      seq = (int.tryParse(tail) ?? 0) + 1;
+    }
+    return '$enrollYear${seq.toString().padLeft(4, '0')}';
+  }
+
+  /// Thêm sinh viên mới. Khi [createAccount] = true, gọi Edge Function
+  /// `create-student` (service role) để tạo luôn tài khoản đăng nhập; ngược lại
+  /// chỉ chèn bản ghi hồ sơ.
+  Future<String?> addStudent({
+    required String studentCode,
+    required String fullName,
+    required String cohort,
+    required String className,
+    required int enrollYear,
+    String? advisorId,
+    int? direction,
+    String? phone,
+    String? birthDate,
+    String? hometown,
+    String? email,
+    required AppUser actor,
+    bool createAccount = true,
+  }) async {
+    final code = studentCode.trim();
+    if (code.isEmpty) return 'Vui lòng nhập mã số sinh viên.';
+
+    if (createAccount) {
+      try {
+        final res = await _sb.functions.invoke('create-student', body: {
+          'studentCode': code,
+          'fullName': fullName.trim(),
+          'cohort': cohort.trim(),
+          'className': className.trim(),
+          'enrollYear': enrollYear,
+          'advisorId': advisorId,
+          'direction': direction,
+          'phone': phone?.trim(),
+          'birthDate': birthDate?.trim(),
+          'hometown': hometown?.trim(),
+          'email': email?.trim(),
+        });
+        final data = res.data;
+        if (data is Map && data['ok'] == true) {
+          await addAudit(actor, 'Thêm sinh viên',
+              '$code · ${fullName.trim()} ($cohort · $className)',
+              studentCode: code);
+          return null;
+        }
+        return (data is Map && data['error'] is String)
+            ? data['error'] as String
+            : 'Không tạo được sinh viên.';
+      } on FunctionException catch (e) {
+        final d = e.details;
+        if (d is Map && d['error'] is String) return d['error'] as String;
+        return 'Không tạo được sinh viên (lỗi máy chủ).';
+      }
+    }
+
+    final dup = await _sb
+        .from('students')
+        .select('id')
+        .eq('student_code', code)
+        .maybeSingle();
+    if (dup != null) return 'Mã số sinh viên đã tồn tại.';
+
+    await _sb.from('students').insert({
+      'student_code': code,
+      'full_name': fullName.trim(),
+      'cohort': cohort.trim(),
+      'class_name': className.trim(),
+      'major': CurriculumSeed.major,
+      'enroll_year': enrollYear,
+      'advisor_id': advisorId,
+      'direction': direction,
+      'status': 'active',
+      'phone': phone?.trim(),
+      'birth_date': birthDate?.trim(),
+      'hometown': hometown?.trim(),
+      'email': email?.trim(),
+    });
+    await addAudit(actor, 'Thêm sinh viên',
+        '$code · ${fullName.trim()} ($cohort · $className)',
+        studentCode: code);
+    return null;
+  }
+
+  /// Cập nhật trực tiếp hồ sơ sinh viên (quản trị, hoặc sinh viên sửa hồ sơ
+  /// của chính mình). [fields] là map cột → giá trị mới.
+  Future<void> updateStudentProfile({
+    required Student student,
+    required Map<String, Object?> fields,
+    required AppUser actor,
+  }) async {
+    if (fields.isEmpty) return;
+    await _sb.from('students').update(fields).eq('id', student.id);
+    await addAudit(actor, 'Cập nhật hồ sơ',
+        'Cập nhật thông tin sinh viên ${student.studentCode}',
+        studentCode: student.studentCode);
+  }
+
+  /// Trợ lý quản trị đề xuất sửa hồ sơ – lưu vào hàng chờ quản trị phê duyệt.
+  Future<void> requestProfileChanges({
+    required Student student,
+    required List<ProfileChange> changes,
+    required AppUser actor,
+  }) async {
+    if (changes.isEmpty) return;
+    await _sb.from('change_requests').insert([
+      for (final ch in changes)
+        {
+          'student_id': student.id,
+          'student_code': student.studentCode,
+          'field': ch.field,
+          'field_label': ch.label,
+          'old_value': ch.oldValue,
+          'new_value': ch.newValue,
+          'requested_by': actor.id,
+          'requested_role': actor.role.key,
+        }
+    ]);
+    await addAudit(actor, 'Đề xuất sửa hồ sơ',
+        'Đề xuất cập nhật ${changes.length} thông tin của '
+            '${student.studentCode} (chờ quản trị duyệt)',
+        studentCode: student.studentCode);
+  }
+
+  Future<List<ChangeRequest>> pendingChangeRequests() async {
+    final rows = await _sb
+        .from('change_requests')
+        .select('*, students(full_name)')
+        .eq('status', 'pending')
+        .order('id', ascending: false);
+    return rows.map((r) {
+      final m = Map<String, Object?>.from(r as Map);
+      final st = r['students'];
+      m['student_name'] = st is Map ? st['full_name'] : null;
+      return ChangeRequest.fromMap(m);
+    }).toList();
+  }
+
+  Future<int> pendingChangeCount() async {
+    final rows =
+        await _sb.from('change_requests').select('id').eq('status', 'pending');
+    return rows.length;
+  }
+
+  Future<void> decideChangeRequest({
+    required ChangeRequest req,
+    required bool approve,
+    required AppUser actor,
+  }) async {
+    await _sb
+        .from('change_requests')
+        .update({'status': approve ? 'approved' : 'rejected'}).eq('id', req.id);
+    if (approve) {
+      await _sb
+          .from('students')
+          .update({req.field: req.newValue}).eq('id', req.studentId);
+    }
+    await addAudit(
+      actor,
+      approve ? 'Duyệt sửa hồ sơ' : 'Từ chối sửa hồ sơ',
+      '${approve ? "Duyệt" : "Từ chối"} cập nhật ${req.fieldLabel} của '
+          '${req.studentCode}',
+      studentCode: req.studentCode,
+    );
+  }
+
+  // --------------------------------------------------------------- courses
+  List<Course>? _courseCache;
+  Future<List<Course>> courses() async {
+    if (_courseCache != null) return _courseCache!;
+    final rows = await _sb
+        .from('courses')
+        .select()
+        .order('block')
+        .order('mandatory', ascending: false)
+        .order('planned_semester')
+        .order('code');
+    _courseCache = _rows(rows).map(Course.fromMap).toList();
+    return _courseCache!;
+  }
+
+  Future<Map<int, Course>> coursesById() async {
+    final list = await courses();
+    return {for (final c in list) c.id: c};
+  }
+
+  Future<void> addCourse(Course c, AppUser actor) async {
+    await _sb.from('courses').insert(c.toMap());
+    _courseCache = null;
+    await addAudit(
+        actor, 'Thêm học phần', '${c.code} · ${c.name} (${c.credits} TC)');
+  }
+
+  Future<void> updateCourse(int id, Course c, AppUser actor) async {
+    await _sb.from('courses').update(c.toMap()).eq('id', id);
+    _courseCache = null;
+    await addAudit(actor, 'Sửa học phần', '${c.code} · ${c.name}');
+  }
+
+  Future<String?> deleteCourse(Course c, AppUser actor) async {
+    final used = await _sb
+        .from('enrollments')
+        .select('id')
+        .eq('course_id', c.id)
+        .limit(1);
+    if (used.isNotEmpty) {
+      return 'Không thể xóa: đã có sinh viên đăng ký/học học phần này.';
+    }
+    await _sb.from('courses').delete().eq('id', c.id);
+    _courseCache = null;
+    await addAudit(actor, 'Xóa học phần', '${c.code} · ${c.name}');
+    return null;
+  }
+
+  // ----------------------------------------------------------- enrollments
+  Future<List<Enrollment>> enrollmentsForStudent(int studentId) async {
+    final byId = await coursesById();
+    final rows =
+        await _sb.from('enrollments').select().eq('student_id', studentId);
+    final list = _rows(rows)
+        .map((r) => Enrollment.fromMap(r,
+            course: byId[(r['course_id'] as num).toInt()]))
+        .toList();
+    list.sort((a, b) {
+      final t = a.term.compareTo(b.term);
+      if (t != 0) return t;
+      return (a.course?.code ?? '').compareTo(b.course?.code ?? '');
+    });
+    return list;
+  }
+
+  /// Nhập điểm thành phần. Điểm tổng kết / chữ / hệ 4 / trạng thái được TÍNH
+  /// TẠI SERVER (trigger), client chỉ gửi điểm giữa kì & cuối kì.
+  Future<void> upsertGrade({
+    required int enrollmentId,
+    double? midterm,
+    double? finalExam,
+    required AppUser actor,
+    String? studentCode,
+    String? courseCode,
+  }) async {
+    await _sb.from('enrollments').update({
+      'midterm':
+          midterm == null ? null : double.parse(midterm.toStringAsFixed(1)),
+      'final_exam':
+          finalExam == null ? null : double.parse(finalExam.toStringAsFixed(1)),
+    }).eq('id', enrollmentId);
+
+    final String detail;
+    if (finalExam == null) {
+      detail = 'Nhập điểm ${courseCode ?? ''}: giữa kì '
+          '${midterm?.toStringAsFixed(1) ?? '-'} (chờ điểm cuối kì)';
+    } else {
+      final overall = GradeScale.overall(midterm, finalExam);
+      detail = 'Nhập điểm ${courseCode ?? ''}: GK '
+          '${midterm?.toStringAsFixed(1) ?? '-'} · CK '
+          '${finalExam.toStringAsFixed(1)} → ${overall.toStringAsFixed(1)} '
+          '(${GradeScale.letter(overall)})';
+    }
+    await addAudit(actor, 'Nhập điểm', detail, studentCode: studentCode);
+  }
+
+  // -------------------------------------------------------- registration
+  Future<String?> registerCourse({
+    required Student student,
+    required Course course,
+    required AppUser actor,
+  }) async {
+    if (!await regOpen()) return 'Kỳ đăng ký hiện đang đóng.';
+    final term = await currentTerm();
+    final existing = await _sb
+        .from('enrollments')
+        .select('status, approval')
+        .eq('student_id', student.id)
+        .eq('course_id', course.id);
+    for (final e in existing) {
+      final st = e['status'] as String;
+      final ap = e['approval'] as String;
+      if (st == 'passed') return 'Học phần đã đạt, không cần đăng ký lại.';
+      if (ap != 'rejected' && (st == 'studying' || st == 'registered')) {
+        return 'Học phần đang được đăng ký hoặc đang học.';
+      }
+    }
+    await _sb.from('enrollments').insert({
+      'student_id': student.id,
+      'course_id': course.id,
+      'term': term,
+      'status': 'studying',
+      'approval': 'approved',
+    });
+    await addAudit(actor, 'Đăng ký học phần',
+        'Đăng ký ${course.code} · ${course.name} (kỳ $term)',
+        studentCode: student.studentCode);
+    return null;
+  }
+
+  Future<void> cancelRegistration(Enrollment e, AppUser actor,
+      {String? studentCode}) async {
+    await _sb.from('enrollments').delete().eq('id', e.id);
+    await addAudit(actor, 'Hủy đăng ký', 'Hủy đăng ký ${e.course?.code ?? ''}',
+        studentCode: studentCode);
+  }
+
+  // -------------------------------------------------------------- audit
+  Future<void> addAudit(AppUser actor, String action, String detail,
+      {String? studentCode}) async {
+    await _sb.from('audit_log').insert({
+      'actor_id': actor.id,
+      'actor_name': actor.fullName,
+      'role': actor.role.key,
+      'action': action,
+      'detail': detail,
+      'student_code': studentCode,
+    });
+  }
+
+  Future<List<AuditEntry>> recentAudit(
+      {String? studentCode, int limit = 60}) async {
+    var q = _sb.from('audit_log').select();
+    if (studentCode != null) q = q.eq('student_code', studentCode);
+    final rows = await q.order('id', ascending: false).limit(limit);
+    return _rows(rows).map(AuditEntry.fromMap).toList();
+  }
+
+  // ------------------------------------------------------------ statistics
+  Future<List<String>> cohorts() async {
+    final rows = await _sb.from('students').select('cohort');
+    final set = <String>{
+      for (final r in rows)
+        if (r['cohort'] != null) r['cohort'] as String
+    };
+    return set.toList()..sort((a, b) => b.compareTo(a));
+  }
+
+  Future<List<StudentWithProgress>> studentsWithProgress({
+    String? advisorId,
+    String? search,
+    String? cohort,
+  }) async {
+    final studs =
+        await students(advisorId: advisorId, search: search, cohort: cohort);
+    if (studs.isEmpty) return [];
+    final courseList = await courses();
+    final byId = {for (final c in courseList) c.id: c};
+
+    final ids = studs.map((s) => s.id).toList();
+    final rows =
+        await _sb.from('enrollments').select().inFilter('student_id', ids);
+    final byStudent = <int, List<Enrollment>>{};
+    for (final raw in _rows(rows)) {
+      final e = Enrollment.fromMap(raw,
+          course: byId[(raw['course_id'] as num).toInt()]);
+      byStudent.putIfAbsent(e.studentId, () => []).add(e);
+    }
+    return studs
+        .map((s) => StudentWithProgress(s,
+            AcademicService.compute(s, byStudent[s.id] ?? const [], courseList)))
+        .toList();
+  }
+}
