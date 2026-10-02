@@ -11,12 +11,12 @@
 class SupabaseConfig {
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://wlxsmjtfkpgqwaylosma.supabase.co',
+    defaultValue: 'https://xvyomegeavqizpnqptmb.supabase.co',
   );
 
   static const String anonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'sb_publishable_ikLJMdw5LETciCh_oSOBuA_2ARPeH1w',
+    defaultValue: 'sb_publishable_FB0S5F2F8pAA1AOfMzCwwg_p5VzpeXW',
   );
 
   /// Tên đăng nhập của app là MSSV (sinh viên) hoặc username (giảng viên);
