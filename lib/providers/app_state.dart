@@ -42,7 +42,8 @@ class AppState extends ChangeNotifier {
       await refreshSettings();
       return true;
     } catch (e) {
-      _loginError = 'Lỗi đăng nhập: $e';
+      _loginError = 'Không kết nối được máy chủ. Kiểm tra mạng hoặc trạng thái '
+          'project Supabase (có thể đang tạm dừng).';
       return false;
     } finally {
       _busy = false;

@@ -111,9 +111,11 @@ class Repository {
           await _sb.from('profiles').select().eq('id', uid).maybeSingle();
       if (row == null) return null;
       return AppUser.fromMap(Map<String, Object?>.from(row));
-    } on AuthException {
+    } on AuthApiException {
+      // API trả lỗi xác thực => sai email/mật khẩu.
       return null;
     }
+    // Lỗi mạng / project Supabase tạm dừng sẽ ném tiếp để báo "không kết nối".
   }
 
   Future<void> signOut() => _sb.auth.signOut();
