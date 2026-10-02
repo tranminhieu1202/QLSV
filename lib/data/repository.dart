@@ -160,6 +160,74 @@ class Repository {
     }
   }
 
+  /// Danh sách tài khoản cán bộ (không phải sinh viên) cho màn quản lý.
+  Future<List<AppUser>> facultyAccounts() async {
+    final rows = await _sb
+        .from('profiles')
+        .select()
+        .neq('role', 'student')
+        .order('role')
+        .order('full_name');
+    return _rows(rows).map(AppUser.fromMap).toList();
+  }
+
+  /// Quản trị tạo tài khoản cán bộ (BCN khoa / trợ lý QT / CVHT) qua Edge Function.
+  Future<String?> createStaff({
+    required String username,
+    required String fullName,
+    required UserRole role,
+    String? password,
+    String? phone,
+    String? email,
+    required AppUser actor,
+  }) async {
+    try {
+      final res = await _sb.functions.invoke('create-staff', body: {
+        'username': username.trim(),
+        'fullName': fullName.trim(),
+        'role': role.key,
+        if (password != null && password.isNotEmpty) 'password': password,
+        'phone': phone?.trim(),
+        'email': email?.trim(),
+      });
+      final data = res.data;
+      if (data is Map && data['ok'] == true) {
+        await addAudit(actor, 'Thêm tài khoản',
+            '${role.label} · ${fullName.trim()} (${username.trim()})');
+        return null;
+      }
+      if (data is Map && data['error'] is String) return data['error'] as String;
+      return 'Không tạo được tài khoản.';
+    } on FunctionException catch (e) {
+      final d = e.details;
+      if (d is Map && d['error'] is String) return d['error'] as String;
+      return 'Chưa tạo được tài khoản: Edge Function create-staff chưa được '
+          'deploy lên cloud.';
+    }
+  }
+
+  /// Lấy hồ sơ của người dùng đang đăng nhập.
+  Future<AppUser?> currentProfile() async {
+    final uid = _sb.auth.currentUser?.id;
+    if (uid == null) return null;
+    final row =
+        await _sb.from('profiles').select().eq('id', uid).maybeSingle();
+    return row == null ? null : AppUser.fromMap(Map<String, Object?>.from(row));
+  }
+
+  /// Người dùng tự cập nhật thông tin cá nhân (họ tên / liên hệ) của mình.
+  Future<String?> updateOwnProfile(Map<String, Object?> fields) async {
+    final uid = _sb.auth.currentUser?.id;
+    if (uid == null) return 'Chưa đăng nhập.';
+    if (fields.isEmpty) return null;
+    try {
+      await _sb.from('profiles').update(fields).eq('id', uid);
+      return null;
+    } on PostgrestException catch (e) {
+      return e.message;
+    }
+  }
+
   // -------------------------------------------------------------- settings
   Future<String> _get(String key, String fallback) async {
     final row =

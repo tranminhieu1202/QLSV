@@ -5,7 +5,9 @@ import '../models/user.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/change_password_dialog.dart';
+import '../widgets/my_profile_dialog.dart';
 import 'activity_screen.dart';
+import 'faculty/accounts_screen.dart';
 import 'faculty/curriculum_screen.dart';
 import 'faculty/dashboard_screen.dart';
 import 'faculty/registration_screen.dart';
@@ -47,6 +49,9 @@ class _HomeShellState extends State<HomeShell> {
         if (role.canManageRegistrationPeriod)
           const _NavItem(Icons.app_registration_outlined,
               Icons.app_registration, 'Kỳ đăng ký & duyệt', RegistrationScreen()),
+        if (role.isAdmin)
+          const _NavItem(Icons.manage_accounts_outlined,
+              Icons.manage_accounts, 'Tài khoản', AccountsScreen()),
         const _NavItem(
             Icons.history_outlined, Icons.history, 'Hoạt động', ActivityScreen()),
       ];
@@ -252,6 +257,11 @@ class _TopBar extends StatelessWidget {
             onSelected: (v) async {
               if (v == 'logout') {
                 await state.logout();
+              } else if (v == 'profile') {
+                await showDialog<bool>(
+                  context: context,
+                  builder: (_) => const MyProfileDialog(),
+                );
               } else if (v == 'password') {
                 await showDialog<bool>(
                   context: context,
@@ -260,6 +270,9 @@ class _TopBar extends StatelessWidget {
               }
             },
             itemBuilder: (_) => [
+              if (user.role.isFaculty)
+                const PopupMenuItem(
+                    value: 'profile', child: Text('Thông tin cá nhân')),
               const PopupMenuItem(
                   value: 'password', child: Text('Đổi mật khẩu')),
               const PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),

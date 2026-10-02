@@ -18,6 +18,8 @@ create table public.profiles (
   full_name    text not null default '',
   student_code text,
   active       boolean not null default true,
+  phone        text,
+  email        text,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -344,6 +346,25 @@ create policy profiles_select on public.profiles
   for select using (auth.uid() is not null);
 create policy profiles_write on public.profiles
   for all using (public.is_admin()) with check (public.is_admin());
+create policy profiles_update_self on public.profiles
+  for update using (id = auth.uid()) with check (id = auth.uid());
+
+-- Chặn người dùng thường tự đổi vai trò / username / trạng thái / MSSV.
+create or replace function public.tg_profiles_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if public.is_admin() then return new; end if;
+  if new.role is distinct from old.role
+     or new.username is distinct from old.username
+     or new.active is distinct from old.active
+     or new.student_code is distinct from old.student_code then
+    raise exception 'Chỉ được sửa thông tin cá nhân (họ tên, liên hệ) của chính mình.';
+  end if;
+  return new;
+end;
+$$;
+create trigger profiles_guard before update on public.profiles
+  for each row execute function public.tg_profiles_guard();
 
 create policy students_select on public.students
   for select using (public.can_view_all() or public.owns_student(id) or public.advises_student(id));

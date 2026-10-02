@@ -88,6 +88,8 @@ class AppUser {
   final UserRole role;
   final String fullName;
   final String? studentCode; // set when role == student
+  final String? phone;
+  final String? email;
 
   const AppUser({
     required this.id,
@@ -95,6 +97,8 @@ class AppUser {
     required this.role,
     required this.fullName,
     this.studentCode,
+    this.phone,
+    this.email,
   });
 
   factory AppUser.fromMap(Map<String, Object?> m) => AppUser(
@@ -103,5 +107,7 @@ class AppUser {
         role: UserRoleX.fromKey(m['role'] as String),
         fullName: (m['full_name'] as String?) ?? '',
         studentCode: m['student_code'] as String?,
+        phone: m['phone'] as String?,
+        email: m['email'] as String?,
       );
 }

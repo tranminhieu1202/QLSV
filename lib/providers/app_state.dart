@@ -56,6 +56,16 @@ class AppState extends ChangeNotifier {
     regOpen = await repo.regOpen();
   }
 
+  /// Người dùng tự cập nhật thông tin cá nhân; làm mới phiên để UI đổi theo.
+  Future<String?> updateMyProfile(Map<String, Object?> fields) async {
+    final err = await repo.updateOwnProfile(fields);
+    if (err != null) return err;
+    final u = await repo.currentProfile();
+    if (u != null) _user = u;
+    notifyListeners();
+    return null;
+  }
+
   /// Signal that shared data changed – all listening screens will reload.
   Future<void> bumpData() async {
     await refreshSettings();

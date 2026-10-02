@@ -57,6 +57,9 @@ enable_confirmations = false
 [functions.create-student]
 verify_jwt = true
 
+[functions.create-staff]
+verify_jwt = true
+
 [functions.reset-student-password]
 verify_jwt = true
 
