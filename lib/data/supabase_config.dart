@@ -1,18 +1,22 @@
-/// Cấu hình kết nối Supabase.
+/// Cấu hình kết nối Supabase (dùng CHUNG cho mọi máy Win + Mac).
 ///
-/// Điền URL + anon key của project (Supabase Studio → Project Settings → API).
-/// Với local dev (`supabase start`), giá trị mặc định thường là:
-///   url    = http://127.0.0.1:54321
-///   anonKey = (chuỗi in ra ở terminal khi chạy `supabase start`)
+/// Điền URL + anon key của CLOUD project (Dashboard → Project Settings → API),
+/// rồi commit/push — cả hai máy chỉ cần `git pull` là đồng nhất, không phải
+/// truyền tham số mỗi lần chạy.
+///  - anon key là khóa CÔNG KHAI, an toàn để commit (bảo mật do RLS đảm nhiệm).
+///    Với project dùng khóa mới, đây là "Publishable key" (sb_publishable_...).
+///  - service_role / secret key (sb_secret_...) TUYỆT ĐỐI không đưa vào đây
+///    (chỉ dùng trong Edge Function, Supabase tự inject).
+///  - Có thể tạm ghi đè khi chạy: --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
 class SupabaseConfig {
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'http://127.0.0.1:54321',
+    defaultValue: 'https://wlxsmjtfkpgqwaylosma.supabase.co',
   );
 
   static const String anonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: '',
+    defaultValue: 'sb_publishable_ikLJMdw5LETciCh_oSOBuA_2ARPeH1w',
   );
 
   /// Tên đăng nhập của app là MSSV (sinh viên) hoặc username (giảng viên);

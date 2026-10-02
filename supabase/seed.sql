@@ -154,14 +154,21 @@ begin
       'full_name', p_name, 'role', p_role::text, 'student_code', p_student_code))
   );
 
-  insert into auth.identities (
-    id, user_id, provider_id, identity_data, provider,
-    last_sign_in_at, created_at, updated_at
-  ) values (
-    gen_random_uuid(), uid, uid::text,
-    jsonb_build_object('sub', uid::text, 'email', p_email), 'email',
-    now(), now(), now()
-  );
+  -- Bản ghi identity giúp danh sách provider đầy đủ; bọc trong exception để
+  -- không làm hỏng seed nếu schema auth.identities khác giữa các phiên bản
+  -- Supabase. Đăng nhập bằng mật khẩu vẫn hoạt động dựa trên auth.users.
+  begin
+    insert into auth.identities (
+      provider_id, user_id, identity_data, provider,
+      last_sign_in_at, created_at, updated_at
+    ) values (
+      uid::text, uid,
+      jsonb_build_object('sub', uid::text, 'email', p_email), 'email',
+      now(), now(), now()
+    );
+  exception when others then
+    null;
+  end;
 
   return uid;
 end;
