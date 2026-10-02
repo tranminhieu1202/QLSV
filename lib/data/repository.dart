@@ -155,7 +155,8 @@ class Repository {
     } on FunctionException catch (e) {
       final d = e.details;
       if (d is Map && d['error'] is String) return d['error'] as String;
-      return 'Không đặt lại được mật khẩu (lỗi máy chủ).';
+      return 'Chưa đặt lại được mật khẩu: Edge Function '
+          'reset-student-password chưa được deploy lên cloud.';
     }
   }
 
@@ -255,9 +256,13 @@ class Repository {
     return '$enrollYear${seq.toString().padLeft(4, '0')}';
   }
 
+  /// Tiền tố báo "đã tạo hồ sơ nhưng chưa tạo được tài khoản đăng nhập".
+  static const warnNoAccountPrefix = '__WARN__';
+
   /// Thêm sinh viên mới. Khi [createAccount] = true, gọi Edge Function
-  /// `create-student` (service role) để tạo luôn tài khoản đăng nhập; ngược lại
-  /// chỉ chèn bản ghi hồ sơ.
+  /// `create-student` (service role) để tạo luôn tài khoản đăng nhập. Nếu
+  /// function chưa deploy / không gọi được, vẫn tạo hồ sơ và trả về cảnh báo
+  /// (chuỗi bắt đầu bằng [warnNoAccountPrefix]); ngược lại chỉ chèn hồ sơ.
   Future<String?> addStudent({
     required String studentCode,
     required String fullName,
@@ -298,16 +303,64 @@ class Repository {
               studentCode: code);
           return null;
         }
-        return (data is Map && data['error'] is String)
-            ? data['error'] as String
-            : 'Không tạo được sinh viên.';
+        // Lỗi nghiệp vụ do function trả về (vd trùng mã) -> báo thẳng.
+        if (data is Map && data['error'] is String) return data['error'] as String;
+        return 'Không tạo được sinh viên.';
       } on FunctionException catch (e) {
         final d = e.details;
         if (d is Map && d['error'] is String) return d['error'] as String;
-        return 'Không tạo được sinh viên (lỗi máy chủ).';
+        // Function chưa deploy / không gọi được -> tạo hồ sơ, kèm cảnh báo.
+        final err = await _insertStudentRecord(
+          code: code,
+          fullName: fullName,
+          cohort: cohort,
+          className: className,
+          enrollYear: enrollYear,
+          advisorId: advisorId,
+          direction: direction,
+          phone: phone,
+          birthDate: birthDate,
+          hometown: hometown,
+          email: email,
+          actor: actor,
+        );
+        if (err != null) return err;
+        return '$warnNoAccountPrefixĐã thêm hồ sơ sinh viên nhưng CHƯA tạo'
+            ' được tài khoản đăng nhập (Edge Function create-student chưa được'
+            ' deploy). Hãy deploy rồi tạo tài khoản sau.';
       }
     }
 
+    return _insertStudentRecord(
+      code: code,
+      fullName: fullName,
+      cohort: cohort,
+      className: className,
+      enrollYear: enrollYear,
+      advisorId: advisorId,
+      direction: direction,
+      phone: phone,
+      birthDate: birthDate,
+      hometown: hometown,
+      email: email,
+      actor: actor,
+    );
+  }
+
+  Future<String?> _insertStudentRecord({
+    required String code,
+    required String fullName,
+    required String cohort,
+    required String className,
+    required int enrollYear,
+    String? advisorId,
+    int? direction,
+    String? phone,
+    String? birthDate,
+    String? hometown,
+    String? email,
+    required AppUser actor,
+  }) async {
     final dup = await _sb
         .from('students')
         .select('id')

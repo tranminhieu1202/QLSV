@@ -379,12 +379,20 @@ class _StudentDialogState extends State<_StudentDialog> {
       createAccount: _createAccount,
     );
     if (!mounted) return;
-    if (err != null) {
+    if (err != null && !err.startsWith(Repository.warnNoAccountPrefix)) {
       setState(() {
         _saving = false;
         _error = err;
       });
       return;
+    }
+    if (err != null) {
+      // Hồ sơ đã lưu nhưng chưa tạo được tài khoản đăng nhập.
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: AppColors.warn,
+        duration: const Duration(seconds: 5),
+        content: Text(err.substring(Repository.warnNoAccountPrefix.length)),
+      ));
     }
     Navigator.pop(context, true);
   }
