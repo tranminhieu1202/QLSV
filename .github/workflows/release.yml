@@ -34,7 +34,10 @@ jobs:
 
       - name: Đóng gói installer
         shell: pwsh
-        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=${{ steps.ver.outputs.version }} installer\qlgd_edu.iss'
+        run: |
+          $iscc = Get-ChildItem 'C:\Program Files*\Inno Setup *\ISCC.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $iscc) { throw 'Không tìm thấy ISCC.exe' }
+          & $iscc /DAppVersion=${{ steps.ver.outputs.version }} installer\qlgd_edu.iss
 
       - name: Phát hành GitHub Release
         uses: softprops/action-gh-release@v2

@@ -28,8 +28,8 @@ OutputBaseFilename=qlgd_edu-setup-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 ; Cài theo người dùng, không cần quyền admin.
 PrivilegesRequired=lowest
 
