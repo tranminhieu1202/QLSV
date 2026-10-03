@@ -66,6 +66,54 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
     ));
   }
 
+  Future<void> _toggleLogin(bool active) async {
+    final state = context.read<AppState>();
+    final err =
+        await state.repo.setStudentLoginActive(_student, active, state.user!);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: err == null ? AppColors.ok : AppColors.danger,
+      content: Text(err ??
+          (active ? 'Đã mở khóa đăng nhập.' : 'Đã khóa đăng nhập sinh viên.')),
+    ));
+  }
+
+  Future<void> _deleteStudent() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa sinh viên?'),
+        content: Text('Xóa vĩnh viễn ${_student.studentCode} · '
+            '${_student.fullName}? Toàn bộ hồ sơ, điểm và tài khoản đăng nhập '
+            'sẽ bị xóa. Không thể hoàn tác.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy')),
+          ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xóa')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final state = context.read<AppState>();
+    final err = await state.repo.deleteStudent(_student, state.user!);
+    if (!mounted) return;
+    if (err != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: AppColors.danger, content: Text(err)));
+      return;
+    }
+    await state.bumpData();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: AppColors.ok,
+        content: Text('Đã xóa sinh viên ${_student.studentCode}.')));
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _student;
@@ -94,6 +142,26 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                 label: const Text('Sửa thông tin',
                     style: TextStyle(color: Colors.white)),
               ),
+            ),
+          if (role.isAdmin)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              tooltip: 'Quản lý tài khoản',
+              onSelected: (v) {
+                if (v == 'lock') {
+                  _toggleLogin(false);
+                } else if (v == 'unlock') {
+                  _toggleLogin(true);
+                } else if (v == 'delete') {
+                  _deleteStudent();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'lock', child: Text('Khóa đăng nhập')),
+                PopupMenuItem(
+                    value: 'unlock', child: Text('Mở khóa đăng nhập')),
+                PopupMenuItem(value: 'delete', child: Text('Xóa sinh viên')),
+              ],
             ),
         ],
       ),

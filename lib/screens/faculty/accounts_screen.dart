@@ -39,6 +39,52 @@ class _AccountsScreenState extends State<AccountsScreen> {
     }
   }
 
+  void _snack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(backgroundColor: color, content: Text(msg)));
+  }
+
+  Future<void> _toggleActive(AppUser u) async {
+    final state = context.read<AppState>();
+    final err = await state.repo.setProfileActive(u.id, !u.active, state.user!);
+    if (!mounted) return;
+    if (err != null) {
+      _snack(err, AppColors.danger);
+      return;
+    }
+    await state.bumpData();
+  }
+
+  Future<void> _delete(AppUser u) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa tài khoản?'),
+        content: Text('Xóa vĩnh viễn tài khoản “${u.fullName}” (${u.username})? '
+            'Không thể hoàn tác.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy')),
+          ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xóa')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final state = context.read<AppState>();
+    final err = await state.repo.deleteFacultyAccount(u, state.user!);
+    if (!mounted) return;
+    if (err != null) {
+      _snack(err, AppColors.danger);
+      return;
+    }
+    _snack('Đã xóa tài khoản ${u.username}.', AppColors.ok);
+    await state.bumpData();
+  }
+
   @override
   Widget build(BuildContext context) {
     final rev = context.watch<AppState>().dataRevision;
@@ -77,31 +123,77 @@ class _AccountsScreenState extends State<AccountsScreen> {
   }
 
   Widget _tile(AppUser u) {
+    final me = context.read<AppState>().user;
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: u.active ? AppColors.primary : AppColors.textMuted,
         child: Text(u.fullName.characters.last,
             style: const TextStyle(color: Colors.white)),
       ),
-      title: Text(u.fullName,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Row(
+        children: [
+          Flexible(
+            child: Text(u.fullName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis),
+          ),
+          if (!u.active) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Text('Đã khóa',
+                  style: TextStyle(
+                      color: AppColors.danger,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ],
+      ),
       subtitle: Text([
         u.role.label,
         'Đăng nhập: ${u.username}',
         if ((u.phone ?? '').isNotEmpty) 'SĐT: ${u.phone}',
         if ((u.email ?? '').isNotEmpty) u.email!,
       ].join(' · ')),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(u.role.shortLabel,
-            style: const TextStyle(
-                color: AppColors.primary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(u.role.shortLabel,
+                style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+          ),
+          if (u.id != me?.id)
+            PopupMenuButton<String>(
+              tooltip: 'Thao tác',
+              onSelected: (v) {
+                if (v == 'toggle') {
+                  _toggleActive(u);
+                } else if (v == 'delete') {
+                  _delete(u);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                    value: 'toggle',
+                    child:
+                        Text(u.active ? 'Khóa đăng nhập' : 'Mở khóa')),
+                const PopupMenuItem(
+                    value: 'delete', child: Text('Xóa tài khoản')),
+              ],
+            ),
+        ],
       ),
     );
   }

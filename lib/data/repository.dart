@@ -88,6 +88,11 @@ class ChangeRequest {
       );
 }
 
+/// Ném khi tài khoản đã bị quản trị khóa (active = false).
+class AccountLockedException implements Exception {
+  const AccountLockedException();
+}
+
 /// Read/write access to the Supabase (PostgreSQL) backend. RLS enforces which
 /// rows each role may touch; this layer only shapes the queries.
 class Repository {
@@ -110,7 +115,12 @@ class Repository {
       final row =
           await _sb.from('profiles').select().eq('id', uid).maybeSingle();
       if (row == null) return null;
-      return AppUser.fromMap(Map<String, Object?>.from(row));
+      final user = AppUser.fromMap(Map<String, Object?>.from(row));
+      if (!user.active) {
+        await _sb.auth.signOut();
+        throw const AccountLockedException();
+      }
+      return user;
     } on AuthApiException {
       // API trả lỗi xác thực => sai email/mật khẩu.
       return null;
@@ -226,6 +236,78 @@ class Repository {
     } on PostgrestException catch (e) {
       return e.message;
     }
+  }
+
+  // ------------------------------------------------- quản lý tài khoản (admin)
+  Future<String?> _studentUserId(String code) async {
+    final row = await _sb
+        .from('students')
+        .select('user_id')
+        .eq('student_code', code)
+        .maybeSingle();
+    return row?['user_id'] as String?;
+  }
+
+  /// Xóa tài khoản đăng nhập (auth user) qua Edge Function.
+  Future<String?> deleteAuthUser({String? userId, String? studentCode}) async {
+    try {
+      final res = await _sb.functions.invoke('delete-user', body: {
+        'userId': userId,
+        'studentCode': studentCode,
+      });
+      final data = res.data;
+      if (data is Map && data['ok'] == true) return null;
+      if (data is Map && data['error'] is String) return data['error'] as String;
+      return 'Không xóa được tài khoản.';
+    } on FunctionException catch (e) {
+      final d = e.details;
+      if (d is Map && d['error'] is String) return d['error'] as String;
+      return 'Edge Function delete-user chưa được deploy.';
+    }
+  }
+
+  /// Khóa / mở khóa đăng nhập của một tài khoản (giữ nguyên dữ liệu).
+  Future<String?> setProfileActive(
+      String userId, bool active, AppUser actor) async {
+    if (userId == actor.id) return 'Không thể tự khóa tài khoản của mình.';
+    await _sb.from('profiles').update({'active': active}).eq('id', userId);
+    await addAudit(actor, active ? 'Mở khóa tài khoản' : 'Khóa tài khoản',
+        'Tài khoản $userId ${active ? "được mở khóa" : "bị khóa"}');
+    return null;
+  }
+
+  /// Khóa / mở khóa đăng nhập của sinh viên (giữ hồ sơ & điểm).
+  Future<String?> setStudentLoginActive(
+      Student s, bool active, AppUser actor) async {
+    final uid = await _studentUserId(s.studentCode);
+    if (uid == null) return 'Sinh viên chưa có tài khoản đăng nhập.';
+    await _sb.from('profiles').update({'active': active}).eq('id', uid);
+    await addAudit(actor, active ? 'Mở khóa đăng nhập' : 'Khóa đăng nhập',
+        '${s.studentCode} · ${s.fullName}', studentCode: s.studentCode);
+    return null;
+  }
+
+  /// Xóa hẳn tài khoản cán bộ (đăng nhập + hồ sơ).
+  Future<String?> deleteFacultyAccount(AppUser u, AppUser actor) async {
+    if (u.id == actor.id) return 'Không thể tự xóa tài khoản của mình.';
+    await deleteAuthUser(userId: u.id); // best effort (service role)
+    await _sb.from('profiles').delete().eq('id', u.id); // chặn đăng nhập
+    await addAudit(actor, 'Xóa tài khoản',
+        '${u.role.label} · ${u.fullName} (${u.username})');
+    return null;
+  }
+
+  /// Xóa sinh viên: tài khoản đăng nhập (nếu có) + hồ sơ + điểm (cascade).
+  Future<String?> deleteStudent(Student s, AppUser actor) async {
+    final uid = await _studentUserId(s.studentCode);
+    if (uid != null) {
+      await deleteAuthUser(studentCode: s.studentCode);
+      await _sb.from('profiles').delete().eq('id', uid);
+    }
+    await _sb.from('students').delete().eq('id', s.id);
+    await addAudit(actor, 'Xóa sinh viên', '${s.studentCode} · ${s.fullName}',
+        studentCode: s.studentCode);
+    return null;
   }
 
   // -------------------------------------------------------------- settings

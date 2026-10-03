@@ -42,8 +42,10 @@ class AppState extends ChangeNotifier {
       await refreshSettings();
       return true;
     } catch (e) {
-      _loginError = 'Không kết nối được máy chủ. Kiểm tra mạng hoặc trạng thái '
-          'project Supabase (có thể đang tạm dừng).';
+      _loginError = e is AccountLockedException
+          ? 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị.'
+          : 'Không kết nối được máy chủ. Kiểm tra mạng hoặc trạng thái '
+              'project Supabase (có thể đang tạm dừng).';
       return false;
     } finally {
       _busy = false;

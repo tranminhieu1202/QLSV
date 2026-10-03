@@ -90,6 +90,7 @@ class AppUser {
   final String? studentCode; // set when role == student
   final String? phone;
   final String? email;
+  final bool active;
 
   const AppUser({
     required this.id,
@@ -99,6 +100,7 @@ class AppUser {
     this.studentCode,
     this.phone,
     this.email,
+    this.active = true,
   });
 
   factory AppUser.fromMap(Map<String, Object?> m) => AppUser(
@@ -109,5 +111,6 @@ class AppUser {
         studentCode: m['student_code'] as String?,
         phone: m['phone'] as String?,
         email: m['email'] as String?,
+        active: (m['active'] as bool?) ?? true,
       );
 }
