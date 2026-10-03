@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/update_service.dart';
 import '../models/user.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/my_profile_dialog.dart';
+import '../widgets/update_dialog.dart';
 import 'activity_screen.dart';
 import 'faculty/accounts_screen.dart';
 import 'faculty/curriculum_screen.dart';
@@ -267,6 +269,18 @@ class _TopBar extends StatelessWidget {
                   context: context,
                   builder: (_) => const ChangePasswordDialog(),
                 );
+              } else if (v == 'update') {
+                final info = await UpdateService().check();
+                if (!context.mounted) return;
+                if (info != null) {
+                  showDialog(
+                    context: context,
+                    builder: (_) => UpdateDialog(info: info),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Đã là phiên bản mới nhất.')));
+                }
               }
             },
             itemBuilder: (_) => [
@@ -275,6 +289,8 @@ class _TopBar extends StatelessWidget {
                     value: 'profile', child: Text('Thông tin cá nhân')),
               const PopupMenuItem(
                   value: 'password', child: Text('Đổi mật khẩu')),
+              const PopupMenuItem(
+                  value: 'update', child: Text('Kiểm tra cập nhật')),
               const PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
             ],
             child: Row(
