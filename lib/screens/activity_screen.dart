@@ -7,6 +7,7 @@ import '../models/user.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/revision_reload.dart';
 
 /// Nhật ký hoạt động – thể hiện việc đồng bộ dữ liệu giữa các vai trò.
 class ActivityScreen extends StatefulWidget {
@@ -16,10 +17,10 @@ class ActivityScreen extends StatefulWidget {
   State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen> {
+class _ActivityScreenState extends State<ActivityScreen>
+    with RevisionReload {
   List<AuditEntry> _items = [];
   bool _loading = true;
-  int _rev = -1;
 
   Future<void> _load() async {
     final state = context.read<AppState>();
@@ -35,11 +36,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    watchRevision(_load);
     final state = context.watch<AppState>();
-    if (state.dataRevision != _rev) {
-      _rev = state.dataRevision;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     return Column(

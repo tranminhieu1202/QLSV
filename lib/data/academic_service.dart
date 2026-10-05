@@ -5,57 +5,90 @@ import '../models/student.dart';
 import 'curriculum_seed.dart';
 
 class AcademicService {
-  /// Required credits for every block (mandatory = sum of its courses).
-  static Map<String, int> blockRequired(List<Course> courses) {
+  static final Map<String, String> _blockKinds = {
+    for (final b in CurriculumSeed.blocks)
+      b['key'] as String: b['kind'] as String,
+  };
+
+  // Số TC yêu cầu chỉ phụ thuộc chương trình đào tạo, nên tính một lần cho
+  // mỗi danh sách học phần thay vì lặp lại cho từng sinh viên.
+  static List<Course>? _primedFor;
+  static Map<String, int> _req = const {};
+  static int _total = 0;
+
+  static void _prime(List<Course> courses) {
+    if (identical(_primedFor, courses)) return;
     final req = <String, int>{};
     for (final b in CurriculumSeed.blocks) {
       final key = b['key'] as String;
-      final kind = b['kind'] as String;
-      if (kind == 'mandatory') {
-        req[key] = courses
-            .where((c) => c.block == key && !c.conditional)
-            .fold(0, (s, c) => s + c.credits);
-      } else {
-        req[key] = b['quota'] as int;
-      }
+      req[key] = b['kind'] == 'mandatory'
+          ? courses
+              .where((c) => c.block == key && !c.conditional)
+              .fold(0, (s, c) => s + c.credits)
+          : b['quota'] as int;
     }
-    return req;
-  }
-
-  static String blockKind(String key) => (CurriculumSeed.blocks
-      .firstWhere((b) => b['key'] == key, orElse: () => const {'kind': 'elective'})['kind']) as String;
-
-  /// Total program credits (đếm hướng ngành 1 lần).
-  static int totalProgramCredits(List<Course> courses) {
-    final req = blockRequired(courses);
+    // Tổng TC chương trình: các khối hướng ngành chỉ tính một lần.
     var total = 0;
     var directionCounted = false;
     for (final entry in req.entries) {
-      if (blockKind(entry.key) == 'direction') {
-        if (!directionCounted) {
-          total += entry.value;
-          directionCounted = true;
-        }
-      } else {
+      if (blockKind(entry.key) != 'direction') {
         total += entry.value;
+      } else if (!directionCounted) {
+        total += entry.value;
+        directionCounted = true;
       }
     }
-    return total;
+    _primedFor = courses;
+    _req = req;
+    _total = total;
   }
 
-  static int currentSemester(Student s, {DateTime? now}) {
-    final ref = now ?? DateTime(2026, 9, 1);
-    final years = ref.year - s.enrollYear;
-    var sem = years * 2 + 1;
-    if (sem > 8) sem = 8;
-    if (sem < 1) sem = 1;
-    return sem;
+  /// Required credits for every block (mandatory = sum of its courses).
+  static Map<String, int> blockRequired(List<Course> courses) {
+    _prime(courses);
+    return _req;
+  }
+
+  static String blockKind(String key) => _blockKinds[key] ?? 'elective';
+
+  /// Total program credits (đếm hướng ngành 1 lần).
+  static int totalProgramCredits(List<Course> courses) {
+    _prime(courses);
+    return _total;
+  }
+
+  /// Năm bắt đầu của năm học hiện tại. Lấy từ mã kỳ hiện tại do quản trị đặt
+  /// (vd '20261' → năm học 2026–2027); nếu không có thì theo lịch, năm học
+  /// mới bắt đầu từ tháng 9.
+  static int academicYearStart({String? term, DateTime? now}) {
+    final fromTerm = term != null && term.length >= 4
+        ? int.tryParse(term.substring(0, 4))
+        : null;
+    if (fromTerm != null) return fromTerm;
+    final d = now ?? DateTime.now();
+    return d.month >= 9 ? d.year : d.year - 1;
+  }
+
+  /// Học kỳ thứ mấy của sinh viên (1–8) tại kỳ hiện tại. Ví dụ năm học 2026:
+  /// mã 26 → năm 1, 25 → năm 2, 24 → năm 3, 23 → năm 4; sang năm học 2027 thì
+  /// mã 27 là năm 1. Kỳ 2 và kỳ hè ('…2', '…3') tính là học kỳ thứ hai của năm.
+  static int currentSemester(Student s, {String? term, DateTime? now}) {
+    final start = academicYearStart(term: term, now: now);
+    final int half;
+    if (term != null && term.length >= 5) {
+      half = term.endsWith('1') ? 1 : 2;
+    } else {
+      final m = (now ?? DateTime.now()).month;
+      half = m >= 9 || m == 1 ? 1 : 2;
+    }
+    return ((start - s.cohortYear) * 2 + half).clamp(1, 8);
   }
 
   static StudentProgress compute(
     Student student,
     List<Enrollment> enrollments,
     List<Course> courses, {
+    String? term,
     DateTime? now,
   }) {
     // Chỉ tính các đăng ký đã được duyệt và học phần không phải điều kiện.
@@ -193,7 +226,7 @@ class AcademicService {
         (remaining - mandatoryRemaining).clamp(0, remaining);
     final cpa = cumGraded == 0 ? 0.0 : cumQuality / cumGraded;
     final latestGpa = terms.isEmpty ? 0.0 : terms.last.gpa;
-    final curSem = currentSemester(student, now: now);
+    final curSem = currentSemester(student, term: term, now: now);
 
     final academicLevel = _academicLevel(terms, unpaidDebt);
     final warnings = _buildWarnings(
@@ -219,11 +252,15 @@ class AcademicService {
       latestGpa: latestGpa,
       currentSemesterNo: curSem,
       chosenDirection: chosenDirection,
+      academicLevel: academicLevel,
+      behindSchedule: warnings.any((w) => w.title == _behindTitle),
       terms: terms,
       warnings: warnings,
       blocks: blocks,
     );
   }
+
+  static const _behindTitle = 'Chậm tiến độ đào tạo';
 
   static int _unpaidDebt(List<Enrollment> effective) {
     final passed = <int>{};
@@ -373,7 +410,7 @@ class AcademicService {
     if (behindMandatory.isNotEmpty && gotMandatory < expected * 0.8) {
       warnings.add(StudentWarning(
         WarnLevel.low,
-        'Chậm tiến độ đào tạo',
+        _behindTitle,
         'Đạt $gotMandatory/$expected TC bắt buộc lẽ ra xong trước kỳ $currentSem. '
             'Học phần bắt buộc còn thiếu so với tiến trình:',
         courses: [
@@ -399,6 +436,7 @@ class AcademicService {
     Student student,
     List<Enrollment> enrollments,
     List<Course> courses, {
+    String? term,
     DateTime? now,
     int? chosenDirection,
   }) {
@@ -426,7 +464,7 @@ class AcademicService {
         passedByBlock[c.block] = (passedByBlock[c.block] ?? 0) + c.credits;
       }
     }
-    final curSem = currentSemester(student, now: now);
+    final curSem = currentSemester(student, term: term, now: now);
 
     final result = <CourseSuggestion>[];
     for (final c in courses) {

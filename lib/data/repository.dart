@@ -104,6 +104,27 @@ class Repository {
   List<Map<String, Object?>> _rows(List<dynamic> rows) =>
       rows.map((r) => Map<String, Object?>.from(r as Map)).toList();
 
+  /// PostgREST trả tối đa `max_rows` (1000) dòng mỗi lần; đọc theo trang để
+  /// không bị cắt bớt dữ liệu khi khoa có nhiều sinh viên / bản ghi điểm.
+  /// [query] phải có `order` ổn định để phân trang không trùng/sót.
+  static const _pageSize = 1000;
+  Future<List<Map<String, Object?>>> _fetchAll(
+      PostgrestTransformBuilder<PostgrestList> Function() query) async {
+    final out = <Map<String, Object?>>[];
+    for (var from = 0;; from += _pageSize) {
+      final page = await query().range(from, from + _pageSize - 1);
+      out.addAll(_rows(page));
+      if (page.length < _pageSize) return out;
+    }
+  }
+
+  /// Xóa các bộ nhớ đệm; gọi khi dữ liệu dùng chung thay đổi (xem
+  /// `AppState.bumpData`).
+  void invalidateCaches() {
+    _courseCache = null;
+    _progressCache.clear();
+  }
+
   // ------------------------------------------------------------------ auth
   Future<AppUser?> login(String username, String password) async {
     final email = SupabaseConfig.toEmail(username);
@@ -347,16 +368,18 @@ class Repository {
     String? cohort,
     String? status,
   }) async {
-    var q = _sb.from('student_overview').select();
-    if (advisorId != null) q = q.eq('advisor_id', advisorId);
-    if (cohort != null && cohort.isNotEmpty) q = q.eq('cohort', cohort);
-    if (status != null && status.isNotEmpty) q = q.eq('status', status);
-    if (search != null && search.trim().isNotEmpty) {
-      final s = search.trim();
-      q = q.or('full_name.ilike.%$s%,student_code.ilike.%$s%');
-    }
-    final rows = await q.order('student_code');
-    return _rows(rows).map(Student.fromMap).toList();
+    final rows = await _fetchAll(() {
+      var q = _sb.from('student_overview').select();
+      if (advisorId != null) q = q.eq('advisor_id', advisorId);
+      if (cohort != null && cohort.isNotEmpty) q = q.eq('cohort', cohort);
+      if (status != null && status.isNotEmpty) q = q.eq('status', status);
+      if (search != null && search.trim().isNotEmpty) {
+        final s = search.trim();
+        q = q.or('full_name.ilike.%$s%,student_code.ilike.%$s%');
+      }
+      return q.order('student_code');
+    });
+    return rows.map(Student.fromMap).toList();
   }
 
   Future<Student?> studentByCode(String code) async {
@@ -381,7 +404,8 @@ class Repository {
 
   /// Các lớp đã có, dùng để gợi ý khi thêm sinh viên mới.
   Future<List<String>> classNames() async {
-    final rows = await _sb.from('students').select('class_name');
+    final rows = await _fetchAll(
+        () => _sb.from('students').select('class_name').order('id'));
     final set = <String>{
       for (final r in rows)
         if (r['class_name'] != null) r['class_name'] as String
@@ -389,12 +413,14 @@ class Repository {
     return set.toList()..sort();
   }
 
-  /// Sinh mã số sinh viên kế tiếp cho một năm nhập học.
+  /// Sinh mã số sinh viên kế tiếp cho một năm nhập học, theo dạng của trường:
+  /// 2 số cuối năm + '01' + số thứ tự 4 chữ số (vd 26011102).
   Future<String> suggestStudentCode(int enrollYear) async {
+    final prefix = '${(enrollYear % 100).toString().padLeft(2, '0')}01';
     final rows = await _sb
         .from('students')
         .select('student_code')
-        .like('student_code', '$enrollYear%')
+        .like('student_code', '$prefix%')
         .order('student_code', ascending: false)
         .limit(1);
     var seq = 1;
@@ -403,7 +429,7 @@ class Repository {
       final tail = last.length >= 4 ? last.substring(last.length - 4) : last;
       seq = (int.tryParse(tail) ?? 0) + 1;
     }
-    return '$enrollYear${seq.toString().padLeft(4, '0')}';
+    return '$prefix${seq.toString().padLeft(4, '0')}';
   }
 
   /// Tiền tố báo "đã tạo hồ sơ nhưng chưa tạo được tài khoản đăng nhập".
@@ -780,16 +806,35 @@ class Repository {
   }
 
   // ------------------------------------------------------------ statistics
-  Future<List<String>> cohorts() async {
-    final rows = await _sb.from('students').select('cohort');
-    final set = <String>{
-      for (final r in rows)
-        if (r['cohort'] != null) r['cohort'] as String
-    };
-    return set.toList()..sort((a, b) => b.compareTo(a));
-  }
+  /// Kết quả [studentsWithProgress] theo phạm vi cố vấn, dùng chung giữa các
+  /// màn hình (Tổng quan, Sinh viên, Cảnh báo, Báo cáo) cho tới lần
+  /// [invalidateCaches] kế tiếp.
+  final Map<String?, Future<List<StudentWithProgress>>> _progressCache = {};
 
   Future<List<StudentWithProgress>> studentsWithProgress({
+    String? advisorId,
+    String? search,
+    String? cohort,
+  }) {
+    final cacheable = (search == null || search.trim().isEmpty) &&
+        (cohort == null || cohort.isEmpty);
+    if (!cacheable) {
+      return _loadProgress(
+          advisorId: advisorId, search: search, cohort: cohort);
+    }
+    final future = _progressCache[advisorId] ??=
+        _loadProgress(advisorId: advisorId);
+    // Không giữ lại lỗi (vd mất mạng) để lần sau thử tải lại.
+    future.catchError((Object _) {
+      if (identical(_progressCache[advisorId], future)) {
+        _progressCache.remove(advisorId);
+      }
+      return const <StudentWithProgress>[];
+    });
+    return future;
+  }
+
+  Future<List<StudentWithProgress>> _loadProgress({
     String? advisorId,
     String? search,
     String? cohort,
@@ -798,20 +843,30 @@ class Repository {
         await students(advisorId: advisorId, search: search, cohort: cohort);
     if (studs.isEmpty) return [];
     final courseList = await courses();
+    final term = await currentTerm();
     final byId = {for (final c in courseList) c.id: c};
 
+    // Lọc theo từng nhóm id để URL không quá dài, mỗi nhóm đọc theo trang.
+    const chunk = 200;
     final ids = studs.map((s) => s.id).toList();
-    final rows =
-        await _sb.from('enrollments').select().inFilter('student_id', ids);
     final byStudent = <int, List<Enrollment>>{};
-    for (final raw in _rows(rows)) {
-      final e = Enrollment.fromMap(raw,
-          course: byId[(raw['course_id'] as num).toInt()]);
-      byStudent.putIfAbsent(e.studentId, () => []).add(e);
+    for (var i = 0; i < ids.length; i += chunk) {
+      final part = ids.sublist(i, (i + chunk).clamp(0, ids.length));
+      final rows = await _fetchAll(() => _sb
+          .from('enrollments')
+          .select()
+          .inFilter('student_id', part)
+          .order('id'));
+      for (final raw in rows) {
+        final e = Enrollment.fromMap(raw,
+            course: byId[(raw['course_id'] as num).toInt()]);
+        byStudent.putIfAbsent(e.studentId, () => []).add(e);
+      }
     }
     return studs
         .map((s) => StudentWithProgress(s,
-            AcademicService.compute(s, byStudent[s.id] ?? const [], courseList)))
+            AcademicService.compute(s, byStudent[s.id] ?? const [], courseList,
+                term: term)))
         .toList();
   }
 }

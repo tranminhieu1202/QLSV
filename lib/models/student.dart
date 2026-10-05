@@ -33,6 +33,15 @@ class Student {
     this.email,
   });
 
+  /// Năm nhập học suy ra từ mã sinh viên theo quy định của trường: 2 chữ số
+  /// đầu là năm vào trường (26xxxxxx → 2026). Trả về null nếu mã không đúng
+  /// dạng 8 chữ số.
+  static int? enrollYearFromCode(String code) =>
+      RegExp(r'^\d{8}$').hasMatch(code) ? 2000 + int.parse(code.substring(0, 2)) : null;
+
+  /// Năm nhập học dùng để tính sinh viên năm thứ mấy: ưu tiên theo mã SV.
+  int get cohortYear => enrollYearFromCode(studentCode) ?? enrollYear;
+
   factory Student.fromMap(Map<String, Object?> m) => Student(
         id: (m['id'] as num).toInt(),
         studentCode: m['student_code'] as String,

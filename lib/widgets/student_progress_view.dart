@@ -41,11 +41,14 @@ class _StudentProgressViewState extends State<StudentProgressView>
   }
 
   Future<void> _load() async {
-    final repo = context.read<AppState>().repo;
+    final state = context.read<AppState>();
+    final repo = state.repo;
+    final term = state.currentTerm;
     final courses = await repo.courses();
     final enrollments = await repo.enrollmentsForStudent(widget.student.id);
     final progress =
-        AcademicService.compute(widget.student, enrollments, courses);
+        AcademicService.compute(widget.student, enrollments, courses,
+            term: term);
     if (!mounted) return;
     setState(() {
       _courses = courses;

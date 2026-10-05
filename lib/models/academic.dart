@@ -126,6 +126,13 @@ class StudentProgress {
   final double latestGpa;
   final int currentSemesterNo;
   final int? chosenDirection; // 1/2/3 hướng ngành đang theo
+
+  /// Mức cảnh báo học tập chính thức theo quy chế (khác [worstLevel] vốn gộp
+  /// cả các lưu ý như nợ tín chỉ, chậm tiến độ).
+  final WarnLevel academicLevel;
+
+  /// Chậm tiến độ: chưa đạt ≥ 80% số TC bắt buộc lẽ ra đã xong.
+  final bool behindSchedule;
   final List<TermSummary> terms;
   final List<StudentWarning> warnings;
   final List<BlockProgress> blocks;
@@ -141,10 +148,15 @@ class StudentProgress {
     required this.latestGpa,
     required this.currentSemesterNo,
     required this.chosenDirection,
+    required this.academicLevel,
+    required this.behindSchedule,
     required this.terms,
     required this.warnings,
     required this.blocks,
   });
+
+  /// Sinh viên năm thứ mấy (kỳ 1–2 → năm 1, kỳ 3–4 → năm 2, ...).
+  int get yearOfStudy => (currentSemesterNo + 1) ~/ 2;
 
   double get completionRate =>
       totalProgramCredits == 0 ? 0 : passedCredits / totalProgramCredits;

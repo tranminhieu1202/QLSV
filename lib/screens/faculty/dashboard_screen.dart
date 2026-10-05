@@ -8,6 +8,7 @@ import '../../models/user.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/revision_reload.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,22 +17,15 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with RevisionReload {
   List<StudentWithProgress> _data = [];
   bool _loading = true;
-  int _rev = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
 
   Future<void> _load() async {
     final state = context.read<AppState>();
-    final advisorId =
-        state.user!.role == UserRole.advisor ? state.user!.id : null;
-    final data = await state.repo.studentsWithProgress(advisorId: advisorId);
+    final data =
+        await state.repo.studentsWithProgress(advisorId: state.advisorScope);
     if (!mounted) return;
     setState(() {
       _data = data;
@@ -41,11 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rev = context.watch<AppState>().dataRevision;
-    if (rev != _rev) {
-      _rev = rev;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
+    watchRevision(_load);
     if (_loading) return const Center(child: CircularProgressIndicator());
     final user = context.read<AppState>().user!;
 
@@ -80,7 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           subtitle:
               'Tổng quan tiến trình đào tạo ngành Quản trị trường học · ${user.role.label}',
           trailing: OutlinedButton.icon(
-            onPressed: _load,
+            onPressed: () => context.read<AppState>().bumpData(),
             icon: const Icon(Icons.refresh),
             label: const Text('Làm mới'),
           ),

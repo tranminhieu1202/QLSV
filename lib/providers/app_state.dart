@@ -15,6 +15,10 @@ class AppState extends ChangeNotifier {
   AppUser? get user => _user;
   bool get isLoggedIn => _user != null;
 
+  /// Cố vấn học tập chỉ xem sinh viên mình phụ trách; vai trò khác xem tất cả.
+  String? get advisorScope =>
+      _user?.role == UserRole.advisor ? _user!.id : null;
+
   String? _loginError;
   String? get loginError => _loginError;
   bool _busy = false;
@@ -70,6 +74,7 @@ class AppState extends ChangeNotifier {
 
   /// Signal that shared data changed – all listening screens will reload.
   Future<void> bumpData() async {
+    repo.invalidateCaches();
     await refreshSettings();
     _dataRevision++;
     lastSync = DateTime.now();
@@ -78,6 +83,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> logout() async {
     await repo.signOut();
+    repo.invalidateCaches();
     _user = null;
     _loginError = null;
     notifyListeners();

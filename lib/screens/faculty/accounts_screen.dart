@@ -5,6 +5,7 @@ import '../../models/user.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/revision_reload.dart';
 
 /// Màn quản trị: xem và tạo tài khoản cán bộ cấp dưới (BCN khoa / trợ lý QT / CVHT).
 class AccountsScreen extends StatefulWidget {
@@ -14,10 +15,10 @@ class AccountsScreen extends StatefulWidget {
   State<AccountsScreen> createState() => _AccountsScreenState();
 }
 
-class _AccountsScreenState extends State<AccountsScreen> {
+class _AccountsScreenState extends State<AccountsScreen>
+    with RevisionReload {
   List<AppUser> _accounts = [];
   bool _loading = true;
-  int _rev = -1;
 
   Future<void> _load() async {
     final repo = context.read<AppState>().repo;
@@ -87,11 +88,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rev = context.watch<AppState>().dataRevision;
-    if (rev != _rev) {
-      _rev = rev;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
+    watchRevision(_load);
     if (_loading) return const Center(child: CircularProgressIndicator());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

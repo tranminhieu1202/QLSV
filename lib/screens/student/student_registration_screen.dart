@@ -9,6 +9,7 @@ import '../../models/enrollment.dart';
 import '../../models/student.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/revision_reload.dart';
 
 class StudentRegistrationScreen extends StatefulWidget {
   const StudentRegistrationScreen({super.key, required this.studentCode});
@@ -19,13 +20,13 @@ class StudentRegistrationScreen extends StatefulWidget {
       _StudentRegistrationScreenState();
 }
 
-class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
+class _StudentRegistrationScreenState extends State<StudentRegistrationScreen>
+    with RevisionReload {
   Student? _student;
   List<Course> _courses = [];
   List<Enrollment> _enrollments = [];
   List<CourseSuggestion> _suggestions = [];
   bool _loading = true;
-  int _rev = -1;
   final _searchCtrl = TextEditingController();
   bool _showAll = false;
 
@@ -40,6 +41,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     final courses = await repo.courses();
     final enrollments = await repo.enrollmentsForStudent(s.id);
     final suggestions = AcademicService.suggest(s, enrollments, courses,
+        term: state.currentTerm,
         chosenDirection: s.direction);
     if (!mounted) return;
     setState(() {
@@ -102,11 +104,8 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    watchRevision(_load);
     final state = context.watch<AppState>();
-    if (state.dataRevision != _rev) {
-      _rev = state.dataRevision;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_student == null) {
       return const Center(child: Text('Không tìm thấy hồ sơ sinh viên.'));

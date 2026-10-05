@@ -5,6 +5,7 @@ import '../../data/repository.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/revision_reload.dart';
 
 /// Quản trị: mở/đóng kỳ đăng ký + phê duyệt các đề xuất sửa hồ sơ do trợ lý gửi.
 class RegistrationScreen extends StatefulWidget {
@@ -14,10 +15,10 @@ class RegistrationScreen extends StatefulWidget {
   State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegistrationScreenState extends State<RegistrationScreen> {
+class _RegistrationScreenState extends State<RegistrationScreen>
+    with RevisionReload {
   List<ChangeRequest> _pending = [];
   bool _loading = true;
-  int _rev = -1;
   late final TextEditingController _termCtrl = TextEditingController();
 
   Future<void> _load() async {
@@ -46,11 +47,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    watchRevision(_load);
     final state = context.watch<AppState>();
-    if (state.dataRevision != _rev) {
-      _rev = state.dataRevision;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     return Column(
@@ -98,7 +96,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               width: 120,
               child: TextField(
                 controller: _termCtrl,
-                decoration: const InputDecoration(isDense: true, hintText: 'vd 20261'),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: 'vd 20261',
+                  // Năm của kỳ quyết định SV năm thứ mấy (mã 26 = năm 1 khi kỳ 2026x).
+                  helperText: 'Năm học theo kỳ',
+                ),
               ),
             ),
             const SizedBox(width: 8),
