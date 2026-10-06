@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 class UpdateInfo {
   final String version; // vd 1.1.0
   final String notes;
-  final String? installerUrl; // asset .exe
+  final String? installerUrl; // .exe (Windows) hoặc -macos.zip (macOS)
   final String pageUrl; // trang release
   UpdateInfo({
     required this.version,
@@ -42,10 +42,14 @@ class UpdateService {
           ((json['tag_name'] as String?) ?? '').replaceFirst(RegExp(r'^v'), '');
       if (latest.isEmpty || !_isNewer(latest, pkg.version)) return null;
 
+      // Mỗi hệ điều hành lấy đúng gói của mình trong release.
+      bool mine(String name) => Platform.isMacOS
+          ? name.endsWith('-macos.zip')
+          : name.endsWith('.exe');
       String? exeUrl;
       for (final a in (json['assets'] as List? ?? const [])) {
         final name = (a['name'] as String?)?.toLowerCase() ?? '';
-        if (name.endsWith('.exe')) {
+        if (mine(name)) {
           exeUrl = a['browser_download_url'] as String?;
           break;
         }

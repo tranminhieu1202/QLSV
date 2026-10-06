@@ -9,6 +9,7 @@ import '../../models/user.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/revision_reload.dart';
 
 class CurriculumScreen extends StatefulWidget {
   const CurriculumScreen({super.key});
@@ -17,10 +18,10 @@ class CurriculumScreen extends StatefulWidget {
   State<CurriculumScreen> createState() => _CurriculumScreenState();
 }
 
-class _CurriculumScreenState extends State<CurriculumScreen> {
+class _CurriculumScreenState extends State<CurriculumScreen>
+    with RevisionReload {
   List<Course> _courses = [];
   bool _loading = true;
-  int _rev = -1;
 
   Future<void> _load() async {
     final courses = await context.read<AppState>().repo.courses();
@@ -33,15 +34,12 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rev = context.watch<AppState>().dataRevision;
-    if (rev != _rev) {
-      _rev = rev;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
+    watchRevision(_load);
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     final canManage = context.read<AppState>().user!.role.canManageCurriculum;
     final total = AcademicService.totalProgramCredits(_courses);
+    final limits = AcademicService.creditLimits(_courses);
     final mandatory = _courses
         .where((c) => c.mandatory && !c.conditional)
         .fold(0, (s, c) => s + c.credits);
@@ -99,9 +97,8 @@ class _CurriculumScreenState extends State<CurriculumScreen> {
             SizedBox(
                 width: 240,
                 child: StatCard(
-                    title: 'Tín chỉ / học kỳ',
-                    value:
-                        '${CurriculumSeed.minCreditsPerTerm} - ${CurriculumSeed.maxCreditsPerTerm}',
+                    title: 'Tín chỉ / học kỳ chính',
+                    value: '${limits.min} - ${limits.max}',
                     icon: Icons.rule,
                     color: const Color(0xFF7B1FA2))),
           ],

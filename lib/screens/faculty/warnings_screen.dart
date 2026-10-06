@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/report_service.dart';
 import '../../data/repository.dart';
 import '../../models/academic.dart';
-import '../../models/user.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/export_button.dart';
 import 'student_detail_screen.dart';
+import '../../widgets/revision_reload.dart';
 
 class WarningsScreen extends StatefulWidget {
   const WarningsScreen({super.key});
@@ -16,23 +18,16 @@ class WarningsScreen extends StatefulWidget {
   State<WarningsScreen> createState() => _WarningsScreenState();
 }
 
-class _WarningsScreenState extends State<WarningsScreen> {
+class _WarningsScreenState extends State<WarningsScreen>
+    with RevisionReload {
   List<StudentWithProgress> _data = [];
   bool _loading = true;
-  int _rev = 0;
   WarnLevel _minLevel = WarnLevel.low;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
 
   Future<void> _load() async {
     final state = context.read<AppState>();
-    final advisorId =
-        state.user!.role == UserRole.advisor ? state.user!.id : null;
-    final data = await state.repo.studentsWithProgress(advisorId: advisorId);
+    final data =
+        await state.repo.studentsWithProgress(advisorId: state.advisorScope);
     if (!mounted) return;
     setState(() {
       _data = data;
@@ -42,11 +37,7 @@ class _WarningsScreenState extends State<WarningsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rev = context.watch<AppState>().dataRevision;
-    if (rev != _rev) {
-      _rev = rev;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
+    watchRevision(_load);
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     final flagged = _data
@@ -65,16 +56,29 @@ class _WarningsScreenState extends State<WarningsScreen> {
           subtitle: '${flagged.length} sinh viên có cảnh báo cần theo dõi',
           trailing: Row(
             children: [
+              ExportMenuButton(
+                enabled: flagged.isNotEmpty,
+                report: () => ReportData(
+                  title: 'Danh sách sinh viên có cảnh báo',
+                  criteria: ['Mức cảnh báo cao nhất ≥ ${_minLevel.label}'],
+                  columns: ReportColumn.defaultList,
+                  rows: flagged,
+                  generatedBy: context.read<AppState>().user!.fullName,
+                ),
+              ),
+              const SizedBox(width: 16),
               const Text('Mức tối thiểu: '),
               const SizedBox(width: 8),
               DropdownButton<WarnLevel>(
                 value: _minLevel,
                 items: const [
                   DropdownMenuItem(value: WarnLevel.info, child: Text('Lưu ý')),
-                  DropdownMenuItem(value: WarnLevel.low, child: Text('Mức 1')),
                   DropdownMenuItem(
-                      value: WarnLevel.medium, child: Text('Mức 2')),
-                  DropdownMenuItem(value: WarnLevel.high, child: Text('Mức 3')),
+                      value: WarnLevel.low, child: Text('Cảnh báo lần 1')),
+                  DropdownMenuItem(
+                      value: WarnLevel.medium, child: Text('Cảnh báo lần 2')),
+                  DropdownMenuItem(
+                      value: WarnLevel.high, child: Text('Buộc thôi học')),
                 ],
                 onChanged: (v) =>
                     setState(() => _minLevel = v ?? WarnLevel.low),

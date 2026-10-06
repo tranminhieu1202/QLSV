@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Central color palette + theme, inspired by a university portal (deep red).
@@ -28,7 +29,10 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: AppColors.bg,
-      fontFamily: 'Segoe UI',
+      // Segoe UI chỉ có trên Windows; macOS dùng font hệ thống (SF Pro), vốn
+      // hiển thị tiếng Việt tốt.
+      fontFamily:
+          defaultTargetPlatform == TargetPlatform.windows ? 'Segoe UI' : null,
     );
 
     return base.copyWith(

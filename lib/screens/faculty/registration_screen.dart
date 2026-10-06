@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/academic_service.dart';
 import '../../data/repository.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/revision_reload.dart';
 
-/// Quản trị: mở/đóng kỳ đăng ký + phê duyệt các đề xuất sửa hồ sơ do trợ lý gửi.
+/// Quản trị: đặt kỳ học hiện tại + phê duyệt các đề xuất sửa hồ sơ do trợ lý
+/// gửi. Sinh viên tự khai báo học phần & điểm nên không còn mở/đóng đăng ký.
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
 
@@ -14,10 +17,10 @@ class RegistrationScreen extends StatefulWidget {
   State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
-class _RegistrationScreenState extends State<RegistrationScreen> {
+class _RegistrationScreenState extends State<RegistrationScreen>
+    with RevisionReload {
   List<ChangeRequest> _pending = [];
   bool _loading = true;
-  int _rev = -1;
   late final TextEditingController _termCtrl = TextEditingController();
 
   Future<void> _load() async {
@@ -46,20 +49,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    watchRevision(_load);
     final state = context.watch<AppState>();
-    if (state.dataRevision != _rev) {
-      _rev = state.dataRevision;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         PageHeader(
-          title: 'Kỳ đăng ký & phê duyệt hồ sơ',
-          subtitle: 'Kỳ hiện tại: ${state.currentTerm} · '
-              '${state.regOpen ? "Đang mở đăng ký" : "Đã đóng đăng ký"} · '
+          title: 'Kỳ học & phê duyệt hồ sơ',
+          subtitle: 'Kỳ hiện tại: ${AcademicService.termLabel(state.currentTerm)} · '
               '${_pending.length} đề xuất sửa hồ sơ chờ duyệt',
         ),
         _periodControls(state),
@@ -89,40 +88,54 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.event_available, color: AppColors.primary),
+            const Icon(Icons.event_note, color: AppColors.primary),
             const SizedBox(width: 12),
-            const Text('Kỳ đăng ký:'),
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
+              child: Text('Kỳ học hiện tại:'),
+            ),
             const SizedBox(width: 8),
             SizedBox(
-              width: 120,
+              width: 140,
               child: TextField(
                 controller: _termCtrl,
-                decoration: const InputDecoration(isDense: true, hintText: 'vd 20261'),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: 'vd 20261',
+                  helperText: 'Năm + kỳ (1, 2, 3 = hè)',
+                ),
               ),
             ),
             const SizedBox(width: 8),
             OutlinedButton(
               onPressed: () async {
-                await state.repo.setCurrentTerm(_termCtrl.text.trim(), state.user!);
+                final term = _termCtrl.text.trim();
+                if (!RegExp(r'^20\d\d[123]$').hasMatch(term)) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Mã kỳ phải có dạng YYYYK, vd 20261.'),
+                      backgroundColor: AppColors.danger));
+                  return;
+                }
+                await state.repo.setCurrentTerm(term, state.user!);
                 await state.bumpData();
               },
               child: const Text('Cập nhật kỳ'),
             ),
             const SizedBox(width: 24),
-            const Text('Trạng thái đăng ký:'),
-            const SizedBox(width: 8),
-            Switch(
-              value: state.regOpen,
-              onChanged: (v) async {
-                await state.repo.setRegOpen(v, state.user!);
-                await state.bumpData();
-              },
+            const Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text(
+                  'Kỳ hiện tại quyết định sinh viên năm thứ mấy (mã 26 là năm 1 '
+                  'khi kỳ là 2026x). Sinh viên tự khai báo học phần và điểm của '
+                  'mình, không cần mở kỳ đăng ký hay duyệt; cán bộ theo dõi ở '
+                  'màn Sinh viên và Cảnh báo.',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+              ),
             ),
-            Text(state.regOpen ? 'Đang mở' : 'Đã đóng',
-                style: TextStyle(
-                    color: state.regOpen ? AppColors.ok : AppColors.danger,
-                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),

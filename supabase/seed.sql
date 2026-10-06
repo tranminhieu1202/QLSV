@@ -126,7 +126,6 @@ where b.key = c.block;
 -- ---------------------------------------------------------------- settings
 insert into public.settings (key, value) values
   ('current_term', '20261'),
-  ('reg_open', '1'),
   ('demo_student_code', '2023001');
 
 -- ============================================================================

@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/report_service.dart';
 import '../../data/repository.dart';
 import '../../models/academic.dart';
 import '../../models/user.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/export_button.dart';
 import 'student_detail_screen.dart';
+import '../../widgets/revision_reload.dart';
+import '../../widgets/sort_filter_header.dart';
 
 class StudentsScreen extends StatefulWidget {
   const StudentsScreen({super.key});
@@ -17,35 +21,25 @@ class StudentsScreen extends StatefulWidget {
   State<StudentsScreen> createState() => _StudentsScreenState();
 }
 
-class _StudentsScreenState extends State<StudentsScreen> {
+class _StudentsScreenState extends State<StudentsScreen>
+    with RevisionReload {
   final _searchCtrl = TextEditingController();
   List<StudentWithProgress> _all = [];
   List<StudentWithProgress> _view = [];
-  List<String> _cohorts = [];
-  String? _cohort;
   String _levelFilter = 'all';
+
+  // Sắp xếp & lọc theo cột (kiểu Excel). Tập rỗng = không lọc.
+  ReportOrder _order = ReportOrder.byCode;
+  final Map<ReportColumn, Set<String>> _colFilters = {};
   bool _loading = true;
-  int _rev = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  String? get _advisorScope {
-    final u = context.read<AppState>().user!;
-    return u.role == UserRole.advisor ? u.id : null;
-  }
 
   Future<void> _load() async {
-    final repo = context.read<AppState>().repo;
-    final data = await repo.studentsWithProgress(advisorId: _advisorScope);
-    final cohorts = await repo.cohorts();
+    final state = context.read<AppState>();
+    final data =
+        await state.repo.studentsWithProgress(advisorId: state.advisorScope);
     if (!mounted) return;
     setState(() {
       _all = data;
-      _cohorts = cohorts;
       _loading = false;
     });
     _applyFilters();
@@ -55,7 +49,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
     final q = _searchCtrl.text.trim().toLowerCase();
     setState(() {
       _view = _all.where((d) {
-        if (_cohort != null && d.student.cohort != _cohort) return false;
+        for (final f in _colFilters.entries) {
+          if (f.value.isNotEmpty && !f.value.contains(_filterValue(f.key, d))) {
+            return false;
+          }
+        }
         if (_levelFilter == 'atrisk' &&
             d.progress.worstLevel.index < WarnLevel.medium.index) {
           return false;
@@ -67,8 +65,35 @@ class _StudentsScreenState extends State<StudentsScreen> {
           return false;
         }
         return true;
-      }).toList();
+      }).toList()
+        ..sort(_compare);
     });
+  }
+
+  /// Giá trị của sinh viên ở cột có bộ lọc.
+  static String _filterValue(ReportColumn c, StudentWithProgress d) =>
+      switch (c) {
+        ReportColumn.className => d.student.className,
+        ReportColumn.cohort => d.student.cohort,
+        ReportColumn.advisor => d.student.advisorName ?? '',
+        _ => '',
+      };
+
+  List<String> _filterOptions(ReportColumn c) {
+    final values = {for (final d in _all) _filterValue(c, d)}.toList()
+      ..sort(vnCompare);
+    return values;
+  }
+
+  int _compare(StudentWithProgress a, StudentWithProgress b) {
+    // Cột "Cảnh báo" ở màn này hiển thị mức cao nhất (gồm cả các lưu ý).
+    if (_order.column == ReportColumn.academicLevel) {
+      final c = a.progress.worstLevel.index
+          .compareTo(b.progress.worstLevel.index);
+      if (c != 0) return _order.ascending ? c : -c;
+      return a.student.studentCode.compareTo(b.student.studentCode);
+    }
+    return _order.compare(a, b);
   }
 
   @override
@@ -79,11 +104,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rev = context.watch<AppState>().dataRevision;
-    if (rev != _rev) {
-      _rev = rev;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
+    watchRevision(_load);
     if (_loading) return const Center(child: CircularProgressIndicator());
     final canAdd = context.read<AppState>().user!.role.canManageStudents;
     return Column(
@@ -133,25 +154,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
           ),
         ),
         const SizedBox(width: 12),
-        DropdownButton<String?>(
-          value: _cohort,
-          hint: const Text('Tất cả khóa'),
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Tất cả khóa')),
-            for (final c in _cohorts)
-              DropdownMenuItem(value: c, child: Text(c)),
-          ],
-          onChanged: (v) {
-            _cohort = v;
-            _applyFilters();
-          },
-        ),
-        const SizedBox(width: 12),
         DropdownButton<String>(
           value: _levelFilter,
           items: const [
             DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái')),
-            DropdownMenuItem(value: 'atrisk', child: Text('Cần chú ý (≥ Mức 2)')),
+            DropdownMenuItem(value: 'atrisk', child: Text('Cần chú ý (≥ cảnh báo lần 2)')),
             DropdownMenuItem(value: 'debt', child: Text('Đang nợ tín chỉ')),
           ],
           onChanged: (v) {
@@ -160,12 +167,33 @@ class _StudentsScreenState extends State<StudentsScreen> {
           },
         ),
         const Spacer(),
+        ExportMenuButton(enabled: _view.isNotEmpty, report: _exportData),
+        const SizedBox(width: 8),
         OutlinedButton.icon(
-          onPressed: _load,
+          onPressed: () => context.read<AppState>().bumpData(),
           icon: const Icon(Icons.refresh),
           label: const Text('Làm mới'),
         ),
       ],
+    );
+  }
+
+  ReportData _exportData() {
+    final q = _searchCtrl.text.trim();
+    return ReportData(
+      title: 'Danh sách sinh viên',
+      criteria: [
+        for (final f in _colFilters.entries)
+          if (f.value.isNotEmpty)
+            '${f.key.label}: ${(f.value.toList()..sort(vnCompare)).join(', ')}',
+        if (_levelFilter == 'atrisk') 'Cần chú ý (≥ cảnh báo lần 2)',
+        if (_levelFilter == 'debt') 'Đang nợ tín chỉ',
+        if (q.isNotEmpty) 'Tìm: "$q"',
+        if (_order != ReportOrder.byCode) 'Sắp xếp: ${_order.label}',
+      ],
+      columns: ReportColumn.defaultList,
+      rows: _view,
+      generatedBy: context.read<AppState>().user!.fullName,
     );
   }
 
@@ -215,8 +243,23 @@ class _StudentsScreenState extends State<StudentsScreen> {
           for (var i = 0; i < _columns.length; i++)
             _cell(
               i,
-              Text(_columns[i].title,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              SortFilterHeader(
+                label: _columns[i].title,
+                column: _columns[i].sort,
+                order: _order,
+                onSort: (o) {
+                  _order = o;
+                  _applyFilters();
+                },
+                filterValues: _columns[i].filterable
+                    ? _filterOptions(_columns[i].sort!)
+                    : null,
+                filterSelected: _colFilters[_columns[i].sort] ?? const {},
+                onFilter: (sel) {
+                  _colFilters[_columns[i].sort!] = sel;
+                  _applyFilters();
+                },
+              ),
             ),
         ],
       ),
@@ -241,7 +284,8 @@ class _StudentsScreenState extends State<StudentsScreen> {
             _cell(
                 2,
                 Text(d.student.fullName, overflow: TextOverflow.ellipsis)),
-            _cell(3, Text(d.student.className)),
+            _cell(3,
+                Text(d.student.className, overflow: TextOverflow.ellipsis)),
             _cell(4, Text(d.student.cohort)),
             _cell(
                 5,
@@ -283,20 +327,27 @@ class _Col {
   final String title;
   final double? width;
   final int flex;
-  const _Col(this.title, {this.width, this.flex = 1});
+
+  /// Cột dùng để sắp xếp khi bấm tiêu đề; null = không sắp xếp.
+  final ReportColumn? sort;
+
+  /// Có bộ lọc theo giá trị (như Excel).
+  final bool filterable;
+  const _Col(this.title,
+      {this.width, this.flex = 1, this.sort, this.filterable = false});
 }
 
 const _columns = <_Col>[
   _Col('STT', width: 48),
-  _Col('MSSV', width: 96),
-  _Col('Họ và tên', flex: 3),
-  _Col('Lớp', width: 96),
-  _Col('Khóa', width: 72),
-  _Col('CVHT', flex: 2),
-  _Col('CPA', width: 64),
-  _Col('TC tích lũy', width: 96),
-  _Col('TC nợ', width: 72),
-  _Col('Cảnh báo', width: 104),
+  _Col('MSSV', width: 112, sort: ReportColumn.code),
+  _Col('Họ và tên', flex: 3, sort: ReportColumn.name),
+  _Col('Lớp', width: 150, sort: ReportColumn.className, filterable: true),
+  _Col('Khóa', width: 108, sort: ReportColumn.cohort, filterable: true),
+  _Col('CVHT', flex: 2, sort: ReportColumn.advisor, filterable: true),
+  _Col('CPA', width: 84, sort: ReportColumn.cpa),
+  _Col('TC tích lũy', width: 112, sort: ReportColumn.passed),
+  _Col('TC nợ', width: 88, sort: ReportColumn.debt),
+  _Col('Cảnh báo', width: 116, sort: ReportColumn.academicLevel),
   _Col('', width: 92),
 ];
 
@@ -370,7 +421,7 @@ class _StudentDialogState extends State<_StudentDialog> {
     final err = await state.repo.addStudent(
       studentCode: code,
       fullName: name,
-      cohort: 'K$_enrollYear',
+      cohort: 'QH-$_enrollYear',
       className: className,
       enrollYear: _enrollYear,
       advisorId: _advisorId,
@@ -425,7 +476,7 @@ class _StudentDialogState extends State<_StudentDialog> {
                     decoration: const InputDecoration(labelText: 'Khóa (năm)'),
                     items: [
                       for (final y in years)
-                        DropdownMenuItem(value: y, child: Text('K$y')),
+                        DropdownMenuItem(value: y, child: Text('QH-$y')),
                     ],
                     onChanged: (v) {
                       if (v == null) return;
@@ -518,9 +569,12 @@ class _StudentDialogState extends State<_StudentDialog> {
         return _classes.where((c) => c.toLowerCase().contains(q));
       },
       fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-        controller.text = _className.text;
-        controller.selection =
-            TextSelection.collapsed(offset: controller.text.length);
+        // Chỉ đồng bộ khi khác để con trỏ không nhảy về cuối mỗi lần rebuild.
+        if (controller.text != _className.text) {
+          controller.text = _className.text;
+          controller.selection =
+              TextSelection.collapsed(offset: controller.text.length);
+        }
         return TextField(
           controller: controller,
           focusNode: focusNode,

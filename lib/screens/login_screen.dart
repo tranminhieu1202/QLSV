@@ -15,11 +15,15 @@ class _LoginScreenState extends State<LoginScreen> {
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
+  late bool _remember;
   String? _demoStudent;
 
   @override
   void initState() {
     super.initState();
+    final state = context.read<AppState>();
+    _remember = state.rememberLogin;
+    _userCtrl.text = state.lastUsername;
     _loadDemoStudent();
   }
 
@@ -35,8 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() =>
-      context.read<AppState>().login(_userCtrl.text, _passCtrl.text);
+  Future<void> _submit() => context
+      .read<AppState>()
+      .login(_userCtrl.text, _passCtrl.text, remember: _remember);
 
   void _fill(String u) {
     _userCtrl.text = u;
@@ -100,8 +105,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
               _feature(Icons.timeline, 'Chương trình & tiến trình đào tạo'),
-              _feature(Icons.app_registration, 'Đăng ký học phần & gợi ý'),
-              _feature(Icons.warning_amber, 'Cảnh báo tín chỉ & học tập'),
+              _feature(Icons.edit_note, 'Sinh viên tự khai báo học phần & điểm'),
+              _feature(Icons.warning_amber, 'Cảnh báo học vụ theo quy chế ĐHQGHN'),
               _feature(Icons.sync, 'Đồng bộ Quản trị – BCN Khoa – CVHT – Sinh viên'),
             ],
           ),
@@ -126,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 28),
             TextField(
               controller: _userCtrl,
+              autofocus: _userCtrl.text.isEmpty,
               decoration: const InputDecoration(
                 labelText: 'Tên đăng nhập',
                 prefixIcon: Icon(Icons.person_outline),
@@ -135,6 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _passCtrl,
+              autofocus: _userCtrl.text.isNotEmpty,
               obscureText: _obscure,
               decoration: InputDecoration(
                 labelText: 'Mật khẩu',
@@ -147,12 +154,25 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               onSubmitted: (_) => _submit(),
             ),
+            const SizedBox(height: 4),
+            CheckboxListTile(
+              value: _remember,
+              onChanged: (v) => setState(() => _remember = v ?? true),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Ghi nhớ đăng nhập trên máy này'),
+              subtitle: const Text(
+                  'Lần sau mở ứng dụng không cần nhập lại. Bỏ chọn nếu dùng '
+                  'máy chung.',
+                  style: TextStyle(fontSize: 12)),
+            ),
             if (state.loginError != null) ...[
               const SizedBox(height: 12),
               Text(state.loginError!,
                   style: const TextStyle(color: AppColors.danger)),
             ],
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             SizedBox(
               height: 52,
               child: ElevatedButton(

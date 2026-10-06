@@ -104,6 +104,27 @@ class Repository {
   List<Map<String, Object?>> _rows(List<dynamic> rows) =>
       rows.map((r) => Map<String, Object?>.from(r as Map)).toList();
 
+  /// PostgREST trả tối đa `max_rows` (1000) dòng mỗi lần; đọc theo trang để
+  /// không bị cắt bớt dữ liệu khi khoa có nhiều sinh viên / bản ghi điểm.
+  /// [query] phải có `order` ổn định để phân trang không trùng/sót.
+  static const _pageSize = 1000;
+  Future<List<Map<String, Object?>>> _fetchAll(
+      PostgrestTransformBuilder<PostgrestList> Function() query) async {
+    final out = <Map<String, Object?>>[];
+    for (var from = 0;; from += _pageSize) {
+      final page = await query().range(from, from + _pageSize - 1);
+      out.addAll(_rows(page));
+      if (page.length < _pageSize) return out;
+    }
+  }
+
+  /// Xóa các bộ nhớ đệm; gọi khi dữ liệu dùng chung thay đổi (xem
+  /// `AppState.bumpData`).
+  void invalidateCaches() {
+    _courseCache = null;
+    _progressCache.clear();
+  }
+
   // ------------------------------------------------------------------ auth
   Future<AppUser?> login(String username, String password) async {
     final email = SupabaseConfig.toEmail(username);
@@ -129,6 +150,12 @@ class Repository {
   }
 
   Future<void> signOut() => _sb.auth.signOut();
+
+  /// Phiên đăng nhập Supabase còn lưu trên máy (tự làm mới token).
+  bool get hasSession => _sb.auth.currentSession != null;
+
+  /// Phát sự kiện khi phiên bị đăng xuất / hết hạn không làm mới được.
+  Stream<AuthState> get authChanges => _sb.auth.onAuthStateChange;
 
   /// Người dùng hiện tại tự đổi mật khẩu của mình.
   Future<String?> changeOwnPassword(String newPassword) async {
@@ -322,7 +349,6 @@ class Repository {
   }
 
   Future<String> currentTerm() => _get('current_term', defaultTerm);
-  Future<bool> regOpen() async => (await _get('reg_open', '0')) == '1';
   Future<String?> demoStudentCode() async {
     final v = await _get('demo_student_code', '');
     return v.isEmpty ? null : v;
@@ -330,14 +356,7 @@ class Repository {
 
   Future<void> setCurrentTerm(String term, AppUser actor) async {
     await _set('current_term', term);
-    await addAudit(actor, 'Đổi kỳ hiện tại', 'Kỳ đăng ký hiện tại: $term');
-  }
-
-  Future<void> setRegOpen(bool open, AppUser actor) async {
-    await _set('reg_open', open ? '1' : '0');
-    final term = await currentTerm();
-    await addAudit(actor, open ? 'Mở kỳ đăng ký' : 'Đóng kỳ đăng ký',
-        'Kỳ đăng ký $term ${open ? "đã mở" : "đã đóng"}');
+    await addAudit(actor, 'Đổi kỳ hiện tại', 'Kỳ học hiện tại: $term');
   }
 
   // -------------------------------------------------------------- students
@@ -347,16 +366,18 @@ class Repository {
     String? cohort,
     String? status,
   }) async {
-    var q = _sb.from('student_overview').select();
-    if (advisorId != null) q = q.eq('advisor_id', advisorId);
-    if (cohort != null && cohort.isNotEmpty) q = q.eq('cohort', cohort);
-    if (status != null && status.isNotEmpty) q = q.eq('status', status);
-    if (search != null && search.trim().isNotEmpty) {
-      final s = search.trim();
-      q = q.or('full_name.ilike.%$s%,student_code.ilike.%$s%');
-    }
-    final rows = await q.order('student_code');
-    return _rows(rows).map(Student.fromMap).toList();
+    final rows = await _fetchAll(() {
+      var q = _sb.from('student_overview').select();
+      if (advisorId != null) q = q.eq('advisor_id', advisorId);
+      if (cohort != null && cohort.isNotEmpty) q = q.eq('cohort', cohort);
+      if (status != null && status.isNotEmpty) q = q.eq('status', status);
+      if (search != null && search.trim().isNotEmpty) {
+        final s = search.trim();
+        q = q.or('full_name.ilike.%$s%,student_code.ilike.%$s%');
+      }
+      return q.order('student_code');
+    });
+    return rows.map(Student.fromMap).toList();
   }
 
   Future<Student?> studentByCode(String code) async {
@@ -381,7 +402,8 @@ class Repository {
 
   /// Các lớp đã có, dùng để gợi ý khi thêm sinh viên mới.
   Future<List<String>> classNames() async {
-    final rows = await _sb.from('students').select('class_name');
+    final rows = await _fetchAll(
+        () => _sb.from('students').select('class_name').order('id'));
     final set = <String>{
       for (final r in rows)
         if (r['class_name'] != null) r['class_name'] as String
@@ -389,12 +411,14 @@ class Repository {
     return set.toList()..sort();
   }
 
-  /// Sinh mã số sinh viên kế tiếp cho một năm nhập học.
+  /// Sinh mã số sinh viên kế tiếp cho một năm nhập học, theo dạng của trường:
+  /// 2 số cuối năm + '01' + số thứ tự 4 chữ số (vd 26011102).
   Future<String> suggestStudentCode(int enrollYear) async {
+    final prefix = '${(enrollYear % 100).toString().padLeft(2, '0')}01';
     final rows = await _sb
         .from('students')
         .select('student_code')
-        .like('student_code', '$enrollYear%')
+        .like('student_code', '$prefix%')
         .order('student_code', ascending: false)
         .limit(1);
     var seq = 1;
@@ -403,7 +427,7 @@ class Repository {
       final tail = last.length >= 4 ? last.substring(last.length - 4) : last;
       seq = (int.tryParse(tail) ?? 0) + 1;
     }
-    return '$enrollYear${seq.toString().padLeft(4, '0')}';
+    return '$prefix${seq.toString().padLeft(4, '0')}';
   }
 
   /// Tiền tố báo "đã tạo hồ sơ nhưng chưa tạo được tài khoản đăng nhập".
@@ -697,65 +721,93 @@ class Repository {
     String? courseCode,
   }) async {
     await _sb.from('enrollments').update({
-      'midterm':
-          midterm == null ? null : double.parse(midterm.toStringAsFixed(1)),
-      'final_exam':
-          finalExam == null ? null : double.parse(finalExam.toStringAsFixed(1)),
+      'midterm': _grade(midterm),
+      'final_exam': _grade(finalExam),
     }).eq('id', enrollmentId);
-
-    final String detail;
-    if (finalExam == null) {
-      detail = 'Nhập điểm ${courseCode ?? ''}: giữa kì '
-          '${midterm?.toStringAsFixed(1) ?? '-'} (chờ điểm cuối kì)';
-    } else {
-      final overall = GradeScale.overall(midterm, finalExam);
-      detail = 'Nhập điểm ${courseCode ?? ''}: GK '
-          '${midterm?.toStringAsFixed(1) ?? '-'} · CK '
-          '${finalExam.toStringAsFixed(1)} → ${overall.toStringAsFixed(1)} '
-          '(${GradeScale.letter(overall)})';
-    }
-    await addAudit(actor, 'Nhập điểm', detail, studentCode: studentCode);
+    await addAudit(actor, 'Nhập điểm',
+        'Nhập điểm ${courseCode ?? ''}${_gradeText(midterm, finalExam)}',
+        studentCode: studentCode);
   }
 
-  // -------------------------------------------------------- registration
-  Future<String?> registerCourse({
+  // ------------------------------------------------- tự khai báo học tập
+  /// Sinh viên tự khai báo đã/đang học [course] ở [term], kèm điểm nếu có.
+  /// Không cần duyệt; điểm chữ, hệ 4 và trạng thái do máy chủ tính.
+  Future<String?> declareCourse({
     required Student student,
     required Course course,
+    required String term,
+    double? midterm,
+    double? finalExam,
     required AppUser actor,
   }) async {
-    if (!await regOpen()) return 'Kỳ đăng ký hiện đang đóng.';
-    final term = await currentTerm();
-    final existing = await _sb
-        .from('enrollments')
-        .select('status, approval')
-        .eq('student_id', student.id)
-        .eq('course_id', course.id);
-    for (final e in existing) {
-      final st = e['status'] as String;
-      final ap = e['approval'] as String;
-      if (st == 'passed') return 'Học phần đã đạt, không cần đăng ký lại.';
-      if (ap != 'rejected' && (st == 'studying' || st == 'registered')) {
-        return 'Học phần đang được đăng ký hoặc đang học.';
+    try {
+      await _sb.from('enrollments').insert({
+        'student_id': student.id,
+        'course_id': course.id,
+        'term': term,
+        'status': 'studying',
+        'approval': 'approved',
+        'midterm': _grade(midterm),
+        'final_exam': _grade(finalExam),
+      });
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        return 'Học phần ${course.code} đã được khai báo ở kỳ $term.';
       }
+      return 'Không lưu được: ${e.message}';
     }
-    await _sb.from('enrollments').insert({
-      'student_id': student.id,
-      'course_id': course.id,
-      'term': term,
-      'status': 'studying',
-      'approval': 'approved',
-    });
-    await addAudit(actor, 'Đăng ký học phần',
-        'Đăng ký ${course.code} · ${course.name} (kỳ $term)',
+    await addAudit(actor, 'Khai báo học phần',
+        '${course.code} · ${course.name} (kỳ $term)${_gradeText(midterm, finalExam)}',
         studentCode: student.studentCode);
     return null;
   }
 
-  Future<void> cancelRegistration(Enrollment e, AppUser actor,
+  /// Sửa kỳ học và/hoặc điểm của một học phần đã khai báo.
+  Future<String?> updateDeclaration({
+    required Enrollment e,
+    required String term,
+    double? midterm,
+    double? finalExam,
+    required AppUser actor,
+    String? studentCode,
+  }) async {
+    try {
+      await _sb.from('enrollments').update({
+        'term': term,
+        'midterm': _grade(midterm),
+        'final_exam': _grade(finalExam),
+      }).eq('id', e.id);
+    } on PostgrestException catch (err) {
+      if (err.code == '23505') {
+        return 'Học phần ${e.course?.code ?? ''} đã được khai báo ở kỳ $term.';
+      }
+      return 'Không lưu được: ${err.message}';
+    }
+    await addAudit(actor, 'Sửa khai báo học phần',
+        '${e.course?.code ?? ''} (kỳ $term)${_gradeText(midterm, finalExam)}',
+        studentCode: studentCode);
+    return null;
+  }
+
+  Future<void> deleteDeclaration(Enrollment e, AppUser actor,
       {String? studentCode}) async {
     await _sb.from('enrollments').delete().eq('id', e.id);
-    await addAudit(actor, 'Hủy đăng ký', 'Hủy đăng ký ${e.course?.code ?? ''}',
+    await addAudit(actor, 'Xóa khai báo học phần',
+        '${e.course?.code ?? ''} (kỳ ${e.term})',
         studentCode: studentCode);
+  }
+
+  static double? _grade(double? v) =>
+      v == null ? null : double.parse(v.toStringAsFixed(1));
+
+  static String _gradeText(double? midterm, double? finalExam) {
+    if (finalExam == null) {
+      return midterm == null
+          ? ''
+          : ' · GK ${midterm.toStringAsFixed(1)} (chờ điểm cuối kì)';
+    }
+    final overall = GradeScale.overall(midterm, finalExam);
+    return ' · điểm ${overall.toStringAsFixed(1)} (${GradeScale.letter(overall)})';
   }
 
   // -------------------------------------------------------------- audit
@@ -780,16 +832,35 @@ class Repository {
   }
 
   // ------------------------------------------------------------ statistics
-  Future<List<String>> cohorts() async {
-    final rows = await _sb.from('students').select('cohort');
-    final set = <String>{
-      for (final r in rows)
-        if (r['cohort'] != null) r['cohort'] as String
-    };
-    return set.toList()..sort((a, b) => b.compareTo(a));
-  }
+  /// Kết quả [studentsWithProgress] theo phạm vi cố vấn, dùng chung giữa các
+  /// màn hình (Tổng quan, Sinh viên, Cảnh báo, Báo cáo) cho tới lần
+  /// [invalidateCaches] kế tiếp.
+  final Map<String?, Future<List<StudentWithProgress>>> _progressCache = {};
 
   Future<List<StudentWithProgress>> studentsWithProgress({
+    String? advisorId,
+    String? search,
+    String? cohort,
+  }) {
+    final cacheable = (search == null || search.trim().isEmpty) &&
+        (cohort == null || cohort.isEmpty);
+    if (!cacheable) {
+      return _loadProgress(
+          advisorId: advisorId, search: search, cohort: cohort);
+    }
+    final future = _progressCache[advisorId] ??=
+        _loadProgress(advisorId: advisorId);
+    // Không giữ lại lỗi (vd mất mạng) để lần sau thử tải lại.
+    future.catchError((Object _) {
+      if (identical(_progressCache[advisorId], future)) {
+        _progressCache.remove(advisorId);
+      }
+      return const <StudentWithProgress>[];
+    });
+    return future;
+  }
+
+  Future<List<StudentWithProgress>> _loadProgress({
     String? advisorId,
     String? search,
     String? cohort,
@@ -798,20 +869,30 @@ class Repository {
         await students(advisorId: advisorId, search: search, cohort: cohort);
     if (studs.isEmpty) return [];
     final courseList = await courses();
+    final term = await currentTerm();
     final byId = {for (final c in courseList) c.id: c};
 
+    // Lọc theo từng nhóm id để URL không quá dài, mỗi nhóm đọc theo trang.
+    const chunk = 200;
     final ids = studs.map((s) => s.id).toList();
-    final rows =
-        await _sb.from('enrollments').select().inFilter('student_id', ids);
     final byStudent = <int, List<Enrollment>>{};
-    for (final raw in _rows(rows)) {
-      final e = Enrollment.fromMap(raw,
-          course: byId[(raw['course_id'] as num).toInt()]);
-      byStudent.putIfAbsent(e.studentId, () => []).add(e);
+    for (var i = 0; i < ids.length; i += chunk) {
+      final part = ids.sublist(i, (i + chunk).clamp(0, ids.length));
+      final rows = await _fetchAll(() => _sb
+          .from('enrollments')
+          .select()
+          .inFilter('student_id', part)
+          .order('id'));
+      for (final raw in rows) {
+        final e = Enrollment.fromMap(raw,
+            course: byId[(raw['course_id'] as num).toInt()]);
+        byStudent.putIfAbsent(e.studentId, () => []).add(e);
+      }
     }
     return studs
         .map((s) => StudentWithProgress(s,
-            AcademicService.compute(s, byStudent[s.id] ?? const [], courseList)))
+            AcademicService.compute(s, byStudent[s.id] ?? const [], courseList,
+                term: term)))
         .toList();
   }
 }
