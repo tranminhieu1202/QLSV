@@ -1,4 +1,4 @@
-name: Release Windows
+name: Release Windows & macOS
 
 on:
   push:
@@ -44,3 +44,28 @@ jobs:
         with:
           files: dist/*.exe
           generate_release_notes: true
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build macos --release
+
+      # Bản chưa ký/notarize: lần đầu mở bằng chuột phải → Open.
+      - name: Đóng gói .zip
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/QLGD EDU.app" "dist/qlgd_edu-${GITHUB_REF_NAME#v}-macos.zip"
+
+      - name: Đính kèm vào GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*-macos.zip

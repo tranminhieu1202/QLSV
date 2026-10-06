@@ -41,15 +41,19 @@ class _UpdateDialogState extends State<UpdateDialog> {
     }
   }
 
-  Future<void> _openPage() async {
-    await launchUrl(Uri.parse(widget.info.pageUrl),
-        mode: LaunchMode.externalApplication);
+  Future<void> _openPage() => _openUrl(widget.info.pageUrl);
+
+  /// macOS: ứng dụng chạy trong sandbox nên không tự thay chính nó; mở link
+  /// tải gói .zip bằng trình duyệt, người dùng kéo app mới vào Applications.
+  Future<void> _openUrl(String url) async {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final canInstall = Platform.isWindows && widget.info.installerUrl != null;
+    final macUrl = Platform.isMacOS ? widget.info.installerUrl : null;
     return AlertDialog(
       title: Text('Có bản cập nhật ${widget.info.version}'),
       content: SizedBox(
@@ -104,6 +108,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
           ElevatedButton(
             onPressed: _downloading ? null : _install,
             child: const Text('Tải & cài'),
+          ),
+        if (macUrl != null)
+          ElevatedButton(
+            onPressed: () => _openUrl(macUrl),
+            child: const Text('Tải bản macOS'),
           ),
       ],
     );
