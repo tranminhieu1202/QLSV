@@ -14,7 +14,7 @@ class ReportFilter {
   final Set<String> classes;
   final String? advisorId;
 
-  /// Mức cảnh báo học tập chính thức; [WarnLevel.none] = không bị cảnh báo.
+  /// Mức cảnh báo học vụ chính thức; [WarnLevel.none] = không bị cảnh báo.
   final Set<WarnLevel> academicLevels;
   final ProgressFilter progress;
   final DebtFilter debt;
@@ -79,8 +79,8 @@ class ReportFilter {
         ..sort((a, b) => a.index.compareTo(b.index));
       final onlyNone = lv.length == 1 && lv.first == WarnLevel.none;
       out.add(onlyNone
-          ? 'Không bị cảnh báo học tập'
-          : 'Cảnh báo học tập: ${join(lv.map(levelText))}');
+          ? 'Không bị cảnh báo học vụ'
+          : 'Cảnh báo học vụ: ${join(lv.map(levelText))}');
     }
     if (years.isNotEmpty) {
       out.add('Năm thứ ${join(years.toList()..sort())}');
@@ -111,7 +111,7 @@ class ReportFilter {
     return out;
   }
 
-  /// Tên mức cảnh báo học tập dùng trong báo cáo.
+  /// Tên mức cảnh báo học vụ dùng trong báo cáo.
   static String levelText(WarnLevel l) =>
       l == WarnLevel.none ? 'Không' : l.label;
 }
@@ -126,14 +126,14 @@ class ReportPreset {
 
   static const list = <ReportPreset>[
     all,
-    ReportPreset('Cảnh báo học tập Mức 1',
+    ReportPreset('Cảnh báo học vụ lần 1',
         ReportFilter(academicLevels: {WarnLevel.low})),
-    ReportPreset('Cảnh báo học tập Mức 2',
+    ReportPreset('Cảnh báo học vụ lần 2 liên tiếp',
         ReportFilter(academicLevels: {WarnLevel.medium})),
-    ReportPreset('Cảnh báo học tập Mức 3',
+    ReportPreset('Thuộc diện buộc thôi học',
         ReportFilter(academicLevels: {WarnLevel.high})),
     ReportPreset(
-        'Tất cả SV bị cảnh báo học tập',
+        'Tất cả SV bị cảnh báo học vụ',
         ReportFilter(
             academicLevels: {WarnLevel.low, WarnLevel.medium, WarnLevel.high})),
     ReportPreset('Sinh viên năm 1', ReportFilter(years: {1})),
@@ -241,7 +241,7 @@ enum ReportColumn {
   passed('TC tích lũy', 1.6, true),
   remaining('TC còn thiếu', 1.6, false),
   debt('TC nợ', 1.1, true),
-  academicLevel('Cảnh báo HT', 1.6, true),
+  academicLevel('Cảnh báo HV', 1.6, true),
   progress('Tiến độ', 1.4, true),
   notes('Ghi chú', 4.4, true);
 
@@ -298,10 +298,10 @@ enum ReportColumn {
       case ReportColumn.progress:
         return p.behindSchedule ? 'Chậm' : 'Đúng';
       case ReportColumn.notes:
-        // Các cảnh báo khác ngoài cảnh báo học tập chính thức (đã có cột riêng).
+        // Các cảnh báo khác ngoài cảnh báo học vụ chính thức (đã có cột riêng).
         final notes = [
           for (final w in p.warnings)
-            if (!w.title.startsWith('Cảnh báo học tập')) w.title,
+            if (!w.official) w.title,
         ];
         return notes.isEmpty ? null : notes.join('; ');
     }

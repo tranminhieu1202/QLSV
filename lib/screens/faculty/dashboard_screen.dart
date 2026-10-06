@@ -94,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               SizedBox(
                 width: cardW,
                 child: StatCard(
-                  title: 'SV cần chú ý (Mức ≥ 2)',
+                  title: 'SV cần chú ý (≥ cảnh báo lần 2)',
                   value: '$atRisk',
                   icon: Icons.warning_amber,
                   color: AppColors.danger,

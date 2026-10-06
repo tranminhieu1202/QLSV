@@ -35,7 +35,7 @@ class ReportExporter {
   static Map<String, Map<String, int>> _summaries(ReportData r) => {
         'Theo năm học': r.countBy((d) => 'Năm ${d.progress.yearOfStudy}'),
         'Theo khóa': r.countBy((d) => d.student.cohort),
-        'Theo mức cảnh báo học tập': r.countBy(
+        'Theo cảnh báo học vụ': r.countBy(
             (d) => ReportFilter.levelText(d.progress.academicLevel)),
         'Theo tiến độ': r.countBy(
             (d) => d.progress.behindSchedule ? 'Chậm tiến độ' : 'Đúng tiến độ'),

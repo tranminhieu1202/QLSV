@@ -158,7 +158,7 @@ class _StudentsScreenState extends State<StudentsScreen>
           value: _levelFilter,
           items: const [
             DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái')),
-            DropdownMenuItem(value: 'atrisk', child: Text('Cần chú ý (≥ Mức 2)')),
+            DropdownMenuItem(value: 'atrisk', child: Text('Cần chú ý (≥ cảnh báo lần 2)')),
             DropdownMenuItem(value: 'debt', child: Text('Đang nợ tín chỉ')),
           ],
           onChanged: (v) {
@@ -186,7 +186,7 @@ class _StudentsScreenState extends State<StudentsScreen>
         for (final f in _colFilters.entries)
           if (f.value.isNotEmpty)
             '${f.key.label}: ${(f.value.toList()..sort(vnCompare)).join(', ')}',
-        if (_levelFilter == 'atrisk') 'Cần chú ý (≥ Mức 2)',
+        if (_levelFilter == 'atrisk') 'Cần chú ý (≥ cảnh báo lần 2)',
         if (_levelFilter == 'debt') 'Đang nợ tín chỉ',
         if (q.isNotEmpty) 'Tìm: "$q"',
         if (_order != ReportOrder.byCode) 'Sắp xếp: ${_order.label}',

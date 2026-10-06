@@ -343,7 +343,6 @@ class Repository {
   }
 
   Future<String> currentTerm() => _get('current_term', defaultTerm);
-  Future<bool> regOpen() async => (await _get('reg_open', '0')) == '1';
   Future<String?> demoStudentCode() async {
     final v = await _get('demo_student_code', '');
     return v.isEmpty ? null : v;
@@ -351,14 +350,7 @@ class Repository {
 
   Future<void> setCurrentTerm(String term, AppUser actor) async {
     await _set('current_term', term);
-    await addAudit(actor, 'Đổi kỳ hiện tại', 'Kỳ đăng ký hiện tại: $term');
-  }
-
-  Future<void> setRegOpen(bool open, AppUser actor) async {
-    await _set('reg_open', open ? '1' : '0');
-    final term = await currentTerm();
-    await addAudit(actor, open ? 'Mở kỳ đăng ký' : 'Đóng kỳ đăng ký',
-        'Kỳ đăng ký $term ${open ? "đã mở" : "đã đóng"}');
+    await addAudit(actor, 'Đổi kỳ hiện tại', 'Kỳ học hiện tại: $term');
   }
 
   // -------------------------------------------------------------- students
@@ -723,65 +715,93 @@ class Repository {
     String? courseCode,
   }) async {
     await _sb.from('enrollments').update({
-      'midterm':
-          midterm == null ? null : double.parse(midterm.toStringAsFixed(1)),
-      'final_exam':
-          finalExam == null ? null : double.parse(finalExam.toStringAsFixed(1)),
+      'midterm': _grade(midterm),
+      'final_exam': _grade(finalExam),
     }).eq('id', enrollmentId);
-
-    final String detail;
-    if (finalExam == null) {
-      detail = 'Nhập điểm ${courseCode ?? ''}: giữa kì '
-          '${midterm?.toStringAsFixed(1) ?? '-'} (chờ điểm cuối kì)';
-    } else {
-      final overall = GradeScale.overall(midterm, finalExam);
-      detail = 'Nhập điểm ${courseCode ?? ''}: GK '
-          '${midterm?.toStringAsFixed(1) ?? '-'} · CK '
-          '${finalExam.toStringAsFixed(1)} → ${overall.toStringAsFixed(1)} '
-          '(${GradeScale.letter(overall)})';
-    }
-    await addAudit(actor, 'Nhập điểm', detail, studentCode: studentCode);
+    await addAudit(actor, 'Nhập điểm',
+        'Nhập điểm ${courseCode ?? ''}${_gradeText(midterm, finalExam)}',
+        studentCode: studentCode);
   }
 
-  // -------------------------------------------------------- registration
-  Future<String?> registerCourse({
+  // ------------------------------------------------- tự khai báo học tập
+  /// Sinh viên tự khai báo đã/đang học [course] ở [term], kèm điểm nếu có.
+  /// Không cần duyệt; điểm chữ, hệ 4 và trạng thái do máy chủ tính.
+  Future<String?> declareCourse({
     required Student student,
     required Course course,
+    required String term,
+    double? midterm,
+    double? finalExam,
     required AppUser actor,
   }) async {
-    if (!await regOpen()) return 'Kỳ đăng ký hiện đang đóng.';
-    final term = await currentTerm();
-    final existing = await _sb
-        .from('enrollments')
-        .select('status, approval')
-        .eq('student_id', student.id)
-        .eq('course_id', course.id);
-    for (final e in existing) {
-      final st = e['status'] as String;
-      final ap = e['approval'] as String;
-      if (st == 'passed') return 'Học phần đã đạt, không cần đăng ký lại.';
-      if (ap != 'rejected' && (st == 'studying' || st == 'registered')) {
-        return 'Học phần đang được đăng ký hoặc đang học.';
+    try {
+      await _sb.from('enrollments').insert({
+        'student_id': student.id,
+        'course_id': course.id,
+        'term': term,
+        'status': 'studying',
+        'approval': 'approved',
+        'midterm': _grade(midterm),
+        'final_exam': _grade(finalExam),
+      });
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        return 'Học phần ${course.code} đã được khai báo ở kỳ $term.';
       }
+      return 'Không lưu được: ${e.message}';
     }
-    await _sb.from('enrollments').insert({
-      'student_id': student.id,
-      'course_id': course.id,
-      'term': term,
-      'status': 'studying',
-      'approval': 'approved',
-    });
-    await addAudit(actor, 'Đăng ký học phần',
-        'Đăng ký ${course.code} · ${course.name} (kỳ $term)',
+    await addAudit(actor, 'Khai báo học phần',
+        '${course.code} · ${course.name} (kỳ $term)${_gradeText(midterm, finalExam)}',
         studentCode: student.studentCode);
     return null;
   }
 
-  Future<void> cancelRegistration(Enrollment e, AppUser actor,
+  /// Sửa kỳ học và/hoặc điểm của một học phần đã khai báo.
+  Future<String?> updateDeclaration({
+    required Enrollment e,
+    required String term,
+    double? midterm,
+    double? finalExam,
+    required AppUser actor,
+    String? studentCode,
+  }) async {
+    try {
+      await _sb.from('enrollments').update({
+        'term': term,
+        'midterm': _grade(midterm),
+        'final_exam': _grade(finalExam),
+      }).eq('id', e.id);
+    } on PostgrestException catch (err) {
+      if (err.code == '23505') {
+        return 'Học phần ${e.course?.code ?? ''} đã được khai báo ở kỳ $term.';
+      }
+      return 'Không lưu được: ${err.message}';
+    }
+    await addAudit(actor, 'Sửa khai báo học phần',
+        '${e.course?.code ?? ''} (kỳ $term)${_gradeText(midterm, finalExam)}',
+        studentCode: studentCode);
+    return null;
+  }
+
+  Future<void> deleteDeclaration(Enrollment e, AppUser actor,
       {String? studentCode}) async {
     await _sb.from('enrollments').delete().eq('id', e.id);
-    await addAudit(actor, 'Hủy đăng ký', 'Hủy đăng ký ${e.course?.code ?? ''}',
+    await addAudit(actor, 'Xóa khai báo học phần',
+        '${e.course?.code ?? ''} (kỳ ${e.term})',
         studentCode: studentCode);
+  }
+
+  static double? _grade(double? v) =>
+      v == null ? null : double.parse(v.toStringAsFixed(1));
+
+  static String _gradeText(double? midterm, double? finalExam) {
+    if (finalExam == null) {
+      return midterm == null
+          ? ''
+          : ' · GK ${midterm.toStringAsFixed(1)} (chờ điểm cuối kì)';
+    }
+    final overall = GradeScale.overall(midterm, finalExam);
+    return ' · điểm ${overall.toStringAsFixed(1)} (${GradeScale.letter(overall)})';
   }
 
   // -------------------------------------------------------------- audit

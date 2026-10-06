@@ -7,8 +7,9 @@ class CurriculumSeed {
   static const String faculty = 'Khoa Quản lý Giáo dục';
   static const String decision = 'QĐ 2676/QĐ-ĐHGD ngày 24/10/2025';
 
-  static const int minCreditsPerTerm = 14;
-  static const int maxCreditsPerTerm = 28;
+  /// Số học kỳ chính theo kế hoạch học tập chuẩn (4 năm). Giới hạn TC đăng ký
+  /// mỗi kỳ tính từ đây – xem `AcademicService.creditLimits`.
+  static const int standardSemesters = 8;
 
   /// Human-readable names for each knowledge block.
   static const Map<String, String> blockNames = {

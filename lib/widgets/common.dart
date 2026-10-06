@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/academic.dart';
+import '../models/enrollment.dart';
 import '../theme/app_theme.dart';
 
 Color warnColor(WarnLevel level) {
@@ -132,6 +133,30 @@ class PageHeader extends StatelessWidget {
           ?trailing,
         ],
       ),
+    );
+  }
+}
+
+/// Nhãn trạng thái học phần (Đạt / Trượt / Đang học).
+class EnrollStatusChip extends StatelessWidget {
+  const EnrollStatusChip(this.status, {super.key});
+  final EnrollStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = switch (status) {
+      EnrollStatus.passed => AppColors.ok,
+      EnrollStatus.failed => AppColors.danger,
+      EnrollStatus.studying => AppColors.info,
+      EnrollStatus.registered => AppColors.textMuted,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+          color: c.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12)),
+      child: Text(status.label,
+          style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 }

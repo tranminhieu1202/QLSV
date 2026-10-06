@@ -29,8 +29,8 @@ class AppState extends ChangeNotifier {
   int get dataRevision => _dataRevision;
   DateTime lastSync = DateTime.now();
 
+  /// Kỳ học hiện tại do quản trị đặt; quyết định sinh viên năm thứ mấy.
   String currentTerm = Repository.defaultTerm;
-  bool regOpen = false;
 
   Future<bool> login(String username, String password) async {
     _busy = true;
@@ -59,7 +59,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshSettings() async {
     currentTerm = await repo.currentTerm();
-    regOpen = await repo.regOpen();
   }
 
   /// Người dùng tự cập nhật thông tin cá nhân; làm mới phiên để UI đổi theo.

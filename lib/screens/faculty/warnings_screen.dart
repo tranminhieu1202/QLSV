@@ -73,10 +73,12 @@ class _WarningsScreenState extends State<WarningsScreen>
                 value: _minLevel,
                 items: const [
                   DropdownMenuItem(value: WarnLevel.info, child: Text('Lưu ý')),
-                  DropdownMenuItem(value: WarnLevel.low, child: Text('Mức 1')),
                   DropdownMenuItem(
-                      value: WarnLevel.medium, child: Text('Mức 2')),
-                  DropdownMenuItem(value: WarnLevel.high, child: Text('Mức 3')),
+                      value: WarnLevel.low, child: Text('Cảnh báo lần 1')),
+                  DropdownMenuItem(
+                      value: WarnLevel.medium, child: Text('Cảnh báo lần 2')),
+                  DropdownMenuItem(
+                      value: WarnLevel.high, child: Text('Buộc thôi học')),
                 ],
                 onChanged: (v) =>
                     setState(() => _minLevel = v ?? WarnLevel.low),

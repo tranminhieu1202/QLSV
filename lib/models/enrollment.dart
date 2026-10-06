@@ -9,7 +9,7 @@ extension EnrollStatusX on EnrollStatus {
       case EnrollStatus.passed:
         return 'Đạt';
       case EnrollStatus.failed:
-        return 'Trượt';
+        return 'Không đạt';
       case EnrollStatus.studying:
         return 'Đang học';
       case EnrollStatus.registered:
@@ -22,7 +22,8 @@ extension EnrollStatusX on EnrollStatus {
           orElse: () => EnrollStatus.registered);
 }
 
-/// Approval state of a student-initiated course registration.
+/// Trạng thái duyệt của dữ liệu cũ. Sinh viên nay tự khai báo nên mọi bản ghi
+/// mới đều là [Approval.approved]; [Approval.rejected] vẫn bị loại khi tính.
 enum Approval { approved, pending, rejected }
 
 extension ApprovalX on Approval {
@@ -90,12 +91,16 @@ class Enrollment {
       );
 }
 
-/// Helpers to convert a 10-scale grade into letter + 4-scale grade.
+/// Quy đổi điểm theo Quy chế đào tạo đại học tại ĐHQGHN
+/// (QĐ 3626/QĐ-ĐHQGHN ngày 21/10/2022, Điều 41 & 43).
 class GradeScale {
-  /// Tỉ trọng điểm giữa kì trong điểm tổng kết (còn lại là điểm cuối kì).
+  /// Tỉ trọng điểm giữa kì khi sinh viên nhập điểm thành phần (còn lại là
+  /// điểm cuối kì). Trọng số thực tế theo đề cương từng học phần; điểm kết thúc
+  /// học phần không dưới 60%.
   static const midtermWeight = 0.3;
 
-  /// Điểm tổng kết hệ 10 từ điểm giữa kì (có thể trống) và điểm cuối kì.
+  /// Điểm học phần hệ 10 từ điểm giữa kì (có thể trống) và điểm cuối kì. Khi
+  /// không có điểm giữa kì thì [finalExam] chính là điểm học phần.
   static double overall(double? midterm, double finalExam) {
     final o = midterm == null
         ? finalExam
@@ -104,7 +109,7 @@ class GradeScale {
   }
 
   static String letter(double g10) {
-    if (g10 >= 9.5) return 'A+';
+    if (g10 >= 9.0) return 'A+';
     if (g10 >= 8.5) return 'A';
     if (g10 >= 8.0) return 'B+';
     if (g10 >= 7.0) return 'B';
@@ -116,8 +121,8 @@ class GradeScale {
   }
 
   static double toFour(double g10) {
-    if (g10 >= 9.5) return 4.0;
-    if (g10 >= 8.5) return 4.0;
+    if (g10 >= 9.0) return 4.0;
+    if (g10 >= 8.5) return 3.7;
     if (g10 >= 8.0) return 3.5;
     if (g10 >= 7.0) return 3.0;
     if (g10 >= 6.5) return 2.5;
@@ -128,4 +133,13 @@ class GradeScale {
   }
 
   static bool isPass(double g10) => g10 >= 4.0;
+
+  /// Xếp loại học lực theo điểm trung bình chung học kỳ (Điều 45).
+  static String standing(double gpa) {
+    if (gpa >= 3.6) return 'Xuất sắc';
+    if (gpa >= 3.2) return 'Giỏi';
+    if (gpa >= 2.5) return 'Khá';
+    if (gpa >= 2.0) return 'Trung bình';
+    return 'Yếu';
+  }
 }

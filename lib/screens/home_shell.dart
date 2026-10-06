@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/academic_service.dart';
 import '../data/update_service.dart';
 import '../models/user.dart';
 import '../providers/app_state.dart';
@@ -17,7 +18,7 @@ import 'faculty/reports_screen.dart';
 import 'faculty/students_screen.dart';
 import 'faculty/warnings_screen.dart';
 import 'student/student_portal_screen.dart';
-import 'student/student_registration_screen.dart';
+import 'student/student_courses_screen.dart';
 
 class _NavItem {
   final IconData icon;
@@ -52,8 +53,8 @@ class _HomeShellState extends State<HomeShell> {
         const _NavItem(Icons.menu_book_outlined, Icons.menu_book, 'CT đào tạo',
             CurriculumScreen()),
         if (role.canManageRegistrationPeriod)
-          const _NavItem(Icons.app_registration_outlined,
-              Icons.app_registration, 'Kỳ đăng ký & duyệt', RegistrationScreen()),
+          const _NavItem(Icons.event_note_outlined, Icons.event_note,
+              'Kỳ học & duyệt hồ sơ', RegistrationScreen()),
         if (role.isAdmin)
           const _NavItem(Icons.manage_accounts_outlined,
               Icons.manage_accounts, 'Tài khoản', AccountsScreen()),
@@ -66,8 +67,8 @@ class _HomeShellState extends State<HomeShell> {
     return [
       _NavItem(Icons.home_outlined, Icons.home, 'Trang chủ',
           StudentPortalScreen(studentCode: code)),
-      _NavItem(Icons.app_registration_outlined, Icons.app_registration,
-          'Đăng ký học phần', StudentRegistrationScreen(studentCode: code)),
+      _NavItem(Icons.edit_note_outlined, Icons.edit_note,
+          'Khai báo học tập', StudentCoursesScreen(studentCode: code)),
       const _NavItem(Icons.menu_book_outlined, Icons.menu_book, 'CT đào tạo',
           CurriculumScreen()),
       const _NavItem(
@@ -239,14 +240,13 @@ class _TopBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: (state.regOpen ? AppColors.ok : AppColors.textMuted)
-                  .withValues(alpha: 0.12),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              'Kỳ ${state.currentTerm} · ${state.regOpen ? "Mở ĐK" : "Đóng ĐK"}',
-              style: TextStyle(
-                  color: state.regOpen ? AppColors.ok : AppColors.textMuted,
+              'Kỳ hiện tại: ${AcademicService.termLabel(state.currentTerm)}',
+              style: const TextStyle(
+                  color: AppColors.primary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600),
             ),

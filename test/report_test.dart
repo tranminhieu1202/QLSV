@@ -62,7 +62,7 @@ void main() {
 
   // Năm 2 (nhập học 2025), học tốt.
   final good = make(_student(1, 'Nguyễn Văn An', 2025), 8.0);
-  // Năm 2, trượt toàn bộ 30 TC → cảnh báo học tập + chậm tiến độ.
+  // Năm 2, trượt toàn bộ 30 TC → cảnh báo học vụ + chậm tiến độ.
   final bad = make(_student(2, 'Trần Thị Bình', 2025), 2.0);
   // Năm 3 (nhập học 2024), học tốt.
   final third = make(_student(3, 'Lê Văn Cường', 2024, cls: 'QT2'), 7.0);
@@ -89,8 +89,8 @@ void main() {
     expect(third.progress.yearOfStudy, 3);
     expect(good.progress.academicLevel, WarnLevel.none);
     expect(good.progress.behindSchedule, isFalse);
-    // Nợ đọng 30 TC (> 24) → Mức 3.
-    expect(bad.progress.academicLevel, WarnLevel.high);
+    // Trượt cả 30 TC ở học kỳ đầu → cảnh báo học vụ lần 1 (chưa liên tiếp).
+    expect(bad.progress.academicLevel, WarnLevel.low);
     expect(bad.progress.behindSchedule, isTrue);
   });
 
@@ -102,9 +102,9 @@ void main() {
     expect(names(const ReportFilter(years: {2})),
         ['Nguyễn Văn An', 'Trần Thị Bình']);
     expect(names(const ReportFilter(years: {2, 3})).length, 3);
-    expect(names(const ReportFilter(academicLevels: {WarnLevel.high})),
+    expect(names(const ReportFilter(academicLevels: {WarnLevel.low})),
         ['Trần Thị Bình']);
-    expect(names(const ReportFilter(academicLevels: {WarnLevel.low})), isEmpty);
+    expect(names(const ReportFilter(academicLevels: {WarnLevel.high})), isEmpty);
     expect(names(const ReportFilter(progress: ProgressFilter.onTrack)),
         isNot(contains('Trần Thị Bình')));
     expect(names(const ReportFilter(debt: DebtFilter.hasDebt)),
@@ -150,7 +150,7 @@ void main() {
     const f = ReportFilter(
         academicLevels: {WarnLevel.low}, years: {3, 2}, cpaBelow: 2);
     expect(f.describe(),
-        ['Cảnh báo học tập: Mức 1', 'Năm thứ 2, 3', 'CPA < 2.00']);
+        ['Cảnh báo học vụ: Cảnh báo lần 1', 'Năm thứ 2, 3', 'CPA < 2.00']);
   });
 
   ReportData report() => ReportData(

@@ -9,6 +9,7 @@ import '../models/student.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';
+import 'course_declaration_dialog.dart';
 
 /// Full academic profile of one student. Shared by faculty (student detail)
 /// and by the student's own portal.
@@ -172,6 +173,7 @@ class _StudentProgressViewState extends State<StudentProgressView>
             columns: const [
               DataColumn(label: Text('Học kỳ')),
               DataColumn(label: Text('GPA')),
+              DataColumn(label: Text('Học lực')),
               DataColumn(label: Text('CPA')),
               DataColumn(label: Text('TC đăng ký')),
               DataColumn(label: Text('TC đạt')),
@@ -182,10 +184,13 @@ class _StudentProgressViewState extends State<StudentProgressView>
             rows: [
               for (final t in p.terms)
                 DataRow(cells: [
-                  DataCell(Text(t.term,
+                  DataCell(Text(AcademicService.termLabel(t.term),
                       style:
                           const TextStyle(fontWeight: FontWeight.w600))),
-                  DataCell(Text(t.gpa.toStringAsFixed(2))),
+                  DataCell(Text(t.standing.isEmpty
+                      ? '-'
+                      : t.gpa.toStringAsFixed(2))),
+                  DataCell(Text(t.standing.isEmpty ? '-' : t.standing)),
                   DataCell(Text(t.cpa.toStringAsFixed(2))),
                   DataCell(_creditCell(t.registeredCredits)),
                   DataCell(Text('${t.passedCredits}')),
@@ -195,7 +200,12 @@ class _StudentProgressViewState extends State<StudentProgressView>
                               ? AppColors.danger
                               : AppColors.textDark))),
                   DataCell(Text('${t.cumulativeCredits}')),
-                  DataCell(LevelBadge(level: t.level)),
+                  DataCell(t.warnReasons.isEmpty
+                      ? LevelBadge(level: t.level)
+                      : Tooltip(
+                          message: t.warnReasons.join('\n'),
+                          child: LevelBadge(level: t.level),
+                        )),
                 ]),
             ],
           ),
@@ -205,9 +215,10 @@ class _StudentProgressViewState extends State<StudentProgressView>
   }
 
   Widget _creditCell(int credits) {
+    final limits = AcademicService.creditLimits(_courses);
     Color? c;
-    if (credits > 0 && credits < 14) c = AppColors.danger;
-    if (credits > 28) c = const Color(0xFFEF6C00);
+    if (credits > 0 && credits < limits.min) c = AppColors.danger;
+    if (credits > limits.max) c = const Color(0xFFEF6C00);
     return Text('$credits',
         style: TextStyle(
             color: c, fontWeight: c != null ? FontWeight.bold : null));
@@ -233,7 +244,7 @@ class _StudentProgressViewState extends State<StudentProgressView>
               DataColumn(label: Text('Loại')),
               DataColumn(label: Text('Kỳ')),
               DataColumn(label: Text('Giữa kì')),
-              DataColumn(label: Text('Cuối kì')),
+              DataColumn(label: Text('Cuối kì / HP')),
               DataColumn(label: Text('Điểm 10')),
               DataColumn(label: Text('Chữ')),
               DataColumn(label: Text('Điểm 4')),
@@ -254,7 +265,7 @@ class _StudentProgressViewState extends State<StudentProgressView>
                       style: const TextStyle(fontWeight: FontWeight.w600))),
                   DataCell(Text(e.gradeLetter ?? '-')),
                   DataCell(Text(e.grade4?.toStringAsFixed(1) ?? '-')),
-                  DataCell(_statusChip(e.status)),
+                  DataCell(EnrollStatusChip(e.status)),
                 ]),
             ],
           ),
@@ -281,146 +292,16 @@ class _StudentProgressViewState extends State<StudentProgressView>
   }
 
   Future<void> _editGradesDialog(Enrollment e) async {
-    final midCtrl =
-        TextEditingController(text: e.midterm?.toStringAsFixed(1) ?? '');
-    final finalCtrl =
-        TextEditingController(text: e.finalExam?.toStringAsFixed(1) ?? '');
-
-    double? parse(String s) {
-      final v = double.tryParse(s.trim().replaceAll(',', '.'));
-      if (v == null || v < 0 || v > 10) return null;
-      return v;
-    }
-
     final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) {
-          final mid = parse(midCtrl.text);
-          final fin = parse(finalCtrl.text);
-          final preview =
-              fin == null ? null : GradeScale.overall(mid, fin);
-          return AlertDialog(
-            title: Text('Nhập điểm · ${e.course?.code ?? ''}'),
-            content: SizedBox(
-              width: 340,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(e.course?.name ?? '',
-                      style: const TextStyle(color: AppColors.textMuted)),
-                  const SizedBox(height: 16),
-                  Row(children: [
-                    Expanded(
-                      child: TextField(
-                        controller: midCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        decoration: const InputDecoration(
-                            labelText: 'Điểm giữa kì (0 - 10)'),
-                        onChanged: (_) => setLocal(() {}),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: finalCtrl,
-                        autofocus: true,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        decoration: const InputDecoration(
-                            labelText: 'Điểm cuối kì (0 - 10)'),
-                        onChanged: (_) => setLocal(() {}),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.tableHeader,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      preview == null
-                          ? 'Điểm tổng kết: chưa có (cần điểm cuối kì)\n'
-                              'Trọng số: GK ${(GradeScale.midtermWeight * 100).round()}% · '
-                              'CK ${((1 - GradeScale.midtermWeight) * 100).round()}%'
-                          : 'Điểm tổng kết: ${preview.toStringAsFixed(1)} '
-                              '(${GradeScale.letter(preview)}) · '
-                              '${GradeScale.isPass(preview) ? 'Đạt' : 'Trượt'}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  if (midCtrl.text.trim().isNotEmpty && mid == null ||
-                      finalCtrl.text.trim().isNotEmpty && fin == null) ...[
-                    const SizedBox(height: 8),
-                    const Text('Điểm phải nằm trong khoảng 0 - 10.',
-                        style: TextStyle(color: AppColors.danger, fontSize: 12)),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Hủy')),
-              ElevatedButton(
-                onPressed: () {
-                  final okMid = midCtrl.text.trim().isEmpty || mid != null;
-                  final okFin = finalCtrl.text.trim().isEmpty || fin != null;
-                  if (okMid && okFin) Navigator.pop(ctx, true);
-                },
-                child: const Text('Lưu'),
-              ),
-            ],
-          );
-        },
+      builder: (_) => CourseDeclarationDialog(
+        student: widget.student,
+        courses: _courses,
+        enrollments: _enrollments,
+        editing: e,
       ),
     );
-    if (saved != true || !mounted) return;
-    final mid = parse(midCtrl.text);
-    final fin = parse(finalCtrl.text);
-    final state = context.read<AppState>();
-    await state.repo.upsertGrade(
-      enrollmentId: e.id,
-      midterm: mid,
-      finalExam: fin,
-      actor: state.user!,
-      studentCode: widget.student.studentCode,
-      courseCode: e.course?.code,
-    );
-    await state.bumpData();
-    await _load();
-  }
-
-  Widget _statusChip(EnrollStatus s) {
-    Color c;
-    switch (s) {
-      case EnrollStatus.passed:
-        c = AppColors.ok;
-        break;
-      case EnrollStatus.failed:
-        c = AppColors.danger;
-        break;
-      case EnrollStatus.studying:
-        c = AppColors.info;
-        break;
-      case EnrollStatus.registered:
-        c = AppColors.textMuted;
-        break;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-          color: c.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12)),
-      child: Text(s.label,
-          style: TextStyle(
-              color: c, fontSize: 12, fontWeight: FontWeight.w600)),
-    );
+    if (saved == true && mounted) await _load();
   }
 
   // ------------------------------------------------ tab 3: curriculum/progress

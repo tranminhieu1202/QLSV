@@ -219,7 +219,7 @@ class _ReportsScreenState extends State<ReportsScreen> with RevisionReload {
               child: const Text('Xóa tiêu chí'),
             ),
           ]),
-          _label('Cảnh báo học tập'),
+          _label('Cảnh báo học vụ (ĐHQGHN)'),
           _chips<WarnLevel>(
             const [
               WarnLevel.none,

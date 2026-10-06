@@ -3,7 +3,7 @@
 -- SQL Editor của project rỗng, bấm Run). Gộp: schema + views + RLS +
 -- chương trình đào tạo + 4 tài khoản mặc định (admin/dean/assistant/advisor1,
 -- mật khẩu 123456). Chỉ chạy trên project CHƯA có schema.
--- (Nguồn: migrations 001–004 + phần dữ liệu CTĐT trong seed.sql.)
+-- (Nguồn: migrations 001–006 + phần dữ liệu CTĐT trong seed.sql.)
 -- ============================================================================
 
 -- ==================== 1) SCHEMA ====================
@@ -154,7 +154,7 @@ $$;
 create or replace function public.grade_letter(g10 numeric)
 returns text language sql immutable as $$
   select case
-    when g10 >= 9.5 then 'A+'
+    when g10 >= 9.0 then 'A+'
     when g10 >= 8.5 then 'A'
     when g10 >= 8.0 then 'B+'
     when g10 >= 7.0 then 'B'
@@ -168,7 +168,8 @@ $$;
 create or replace function public.grade_four(g10 numeric)
 returns numeric language sql immutable as $$
   select case
-    when g10 >= 8.5 then 4.0
+    when g10 >= 9.0 then 4.0
+    when g10 >= 8.5 then 3.7
     when g10 >= 8.0 then 3.5
     when g10 >= 7.0 then 3.0
     when g10 >= 6.5 then 2.5
@@ -242,13 +243,19 @@ select student_id, term,
 from public.effective_enrollments
 group by student_id, term;
 
+-- CPA tích lũy: chỉ học phần đã đạt, mỗi học phần lấy lần đạt gần nhất.
 create view public.student_cpa
 with (security_invoker = true) as
 select student_id,
   round(sum(grade4 * credits) filter (where grade4 is not null)
         / nullif(sum(credits) filter (where grade4 is not null), 0), 2) as cpa,
-  coalesce(sum(credits) filter (where status = 'passed'), 0) as passed_credits
-from public.effective_enrollments
+  coalesce(sum(credits), 0) as passed_credits
+from (
+  select distinct on (student_id, course_id) student_id, course_id, grade4, credits
+  from public.effective_enrollments
+  where status = 'passed'
+  order by student_id, course_id, term desc, id desc
+) t
 group by student_id;
 
 create view public.student_debt
@@ -526,7 +533,6 @@ where b.key = c.block;
 
 insert into public.settings (key, value) values
   ('current_term', '20261'),
-  ('reg_open', '1'),
   ('demo_student_code', '2023001');
 
 -- ==================== 5) TÀI KHOẢN MẶC ĐỊNH (mật khẩu 123456) ====================
