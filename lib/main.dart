@@ -19,7 +19,7 @@ Future<void> main() async {
 
   runApp(
     ChangeNotifierProvider(
-      create: (_) => AppState(Supabase.instance.client),
+      create: (_) => AppState(Supabase.instance.client)..restoreSession(),
       child: const QlgdApp(),
     ),
   );
@@ -57,8 +57,11 @@ class _QlgdAppState extends State<QlgdApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: Consumer<AppState>(
-        builder: (context, state, _) =>
-            state.isLoggedIn ? const HomeShell() : const LoginScreen(),
+        builder: (context, state, _) => state.restoring
+            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+            : state.isLoggedIn
+                ? const HomeShell()
+                : const LoginScreen(),
       ),
     );
   }

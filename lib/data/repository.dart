@@ -151,6 +151,12 @@ class Repository {
 
   Future<void> signOut() => _sb.auth.signOut();
 
+  /// Phiên đăng nhập Supabase còn lưu trên máy (tự làm mới token).
+  bool get hasSession => _sb.auth.currentSession != null;
+
+  /// Phát sự kiện khi phiên bị đăng xuất / hết hạn không làm mới được.
+  Stream<AuthState> get authChanges => _sb.auth.onAuthStateChange;
+
   /// Người dùng hiện tại tự đổi mật khẩu của mình.
   Future<String?> changeOwnPassword(String newPassword) async {
     try {

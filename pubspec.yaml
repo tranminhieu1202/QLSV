@@ -37,6 +37,9 @@ dependencies:
   # State management
   provider: ^6.1.2
 
+  # Ghi nhớ đăng nhập / tên đăng nhập gần nhất trên máy
+  shared_preferences: ^2.3.0
+
   # Backend: Supabase (Postgres + Auth + RLS)
   supabase_flutter: ^2.8.0
 

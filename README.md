@@ -81,6 +81,7 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
 
 ### 1.5. Vận hành
 
+- **Ghi nhớ đăng nhập** (mọi vai trò, mặc định bật): mở lại ứng dụng là vào thẳng, không cần nhập mật khẩu; phiên tự gia hạn. Bỏ chọn khi dùng máy chung. Tài khoản bị khóa, bị đổi mật khẩu hoặc bấm *Đăng xuất* thì phải đăng nhập lại. Tên đăng nhập gần nhất luôn được điền sẵn.
 - **Tự kiểm tra bản cập nhật** qua GitHub Releases, tải và cài bản mới ngay trong ứng dụng.
 - **Bộ cài Windows** (Inno Setup) và **gói macOS** (`qlgd_edu-<phiên bản>-macos.zip`, macOS 12 trở lên) được build tự động bằng GitHub Actions mỗi khi gắn tag `v*`. Gói macOS chưa ký số/notarize nên lần đầu mở cần chuột phải → *Open*; khi có bản mới, app mở link tải gói .zip thay vì tự cài.
 - **Nhập dữ liệu sinh viên từ Excel** (`tools/import_students.py`):
