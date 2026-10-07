@@ -23,7 +23,7 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
 
 ### 1.2. Các màn hình dành cho cán bộ
 
-- **Tổng quan**: số sinh viên, số SV cần chú ý (từ cảnh báo học vụ lần 2), số SV nợ tín chỉ, CPA trung bình; biểu đồ phân bố mức cảnh báo và số SV theo khóa.
+- **Tổng quan**: lọc theo khóa cho toàn màn hình; 5 chỉ số chính (sinh viên, bị cảnh báo học vụ kèm số diện buộc thôi học, chậm tiến độ, nợ tín chỉ, CPA trung bình của SV đã có điểm); biểu đồ cảnh báo học vụ và tiến độ đào tạo theo năm học, phân bố CPA theo xếp loại (rê chuột xem số liệu, bấm nút bảng để xem dạng bảng); danh sách sinh viên cần chú ý, bấm để mở hồ sơ.
 - **Sinh viên**
   - Danh sách có tìm kiếm theo MSSV/họ tên.
   - Tiêu đề cột kiểu Excel: bấm để sắp xếp, menu lọc giá trị theo Khóa / Lớp / CVHT.

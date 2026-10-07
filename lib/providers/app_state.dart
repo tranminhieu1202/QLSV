@@ -10,13 +10,15 @@ import '../models/user.dart';
 /// Holds the authenticated session, shared services and a global "data
 /// revision" used to keep every open screen in sync across roles.
 class AppState extends ChangeNotifier {
-  AppState(SupabaseClient sb) : repo = Repository(sb) {
+  /// [repo] chỉ truyền khi kiểm thử (repository giả).
+  AppState(SupabaseClient sb, {Repository? repo})
+    : repo = repo ?? Repository(sb) {
     // Phiên bị thu hồi ở nơi khác (đổi mật khẩu, token hết hạn...) thì quay
     // về màn đăng nhập.
-    _authSub = repo.authChanges.listen((s) {
+    _authSub = this.repo.authChanges.listen((s) {
       if (s.event == AuthChangeEvent.signedOut && _user != null) {
         _user = null;
-        repo.invalidateCaches();
+        this.repo.invalidateCaches();
         notifyListeners();
       }
     });
@@ -90,8 +92,11 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String username, String password,
-      {bool remember = true}) async {
+  Future<bool> login(
+    String username,
+    String password, {
+    bool remember = true,
+  }) async {
     _busy = true;
     _loginError = null;
     notifyListeners();
@@ -117,7 +122,7 @@ class AppState extends ChangeNotifier {
       _loginError = e is AccountLockedException
           ? 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị.'
           : 'Không kết nối được máy chủ. Kiểm tra mạng hoặc trạng thái '
-              'project Supabase (có thể đang tạm dừng).';
+                'project Supabase (có thể đang tạm dừng).';
       return false;
     } finally {
       _busy = false;
@@ -153,6 +158,14 @@ class AppState extends ChangeNotifier {
     await repo.signOut();
     repo.invalidateCaches();
     _loginError = null;
+    notifyListeners();
+  }
+
+  /// Đặt người dùng trực tiếp, chỉ dùng trong kiểm thử giao diện.
+  @visibleForTesting
+  void debugSetUser(AppUser u) {
+    _user = u;
+    _restoring = false;
     notifyListeners();
   }
 
