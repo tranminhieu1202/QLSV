@@ -233,9 +233,13 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Flexible(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
+          ),
           const SizedBox(width: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

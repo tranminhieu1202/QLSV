@@ -52,13 +52,14 @@ class SortFilterHeader extends StatelessWidget {
             child: Text(label,
                 style: style.copyWith(
                     color: _sorted ? AppColors.primary : null),
-                overflow: TextOverflow.ellipsis),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1),
           ),
         ),
         if (_sorted)
           Icon(order!.ascending ? Icons.arrow_upward : Icons.arrow_downward,
               size: 14, color: AppColors.primary),
-        _menu(context, col),
+        SizedBox(width: 20, height: 20, child: _menu(context, col)),
       ],
     );
   }
@@ -67,10 +68,11 @@ class SortFilterHeader extends StatelessWidget {
     return PopupMenuButton<String>(
       tooltip: 'Sắp xếp / lọc theo $label',
       padding: EdgeInsets.zero,
-      iconSize: 18,
+      iconSize: 16,
+      constraints: const BoxConstraints.tightFor(width: 20, height: 20),
       icon: Icon(
         _filtered ? Icons.filter_alt : Icons.arrow_drop_down,
-        size: 18,
+        size: 16,
         color: _filtered ? AppColors.primary : AppColors.textMuted,
       ),
       onSelected: (v) async {
