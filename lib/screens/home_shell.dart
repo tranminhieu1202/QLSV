@@ -8,6 +8,7 @@ import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/my_profile_dialog.dart';
+import '../widgets/user_avatar.dart';
 import '../widgets/update_dialog.dart';
 import 'activity_screen.dart';
 import 'faculty/accounts_screen.dart';
@@ -287,9 +288,9 @@ class _TopBar extends StatelessWidget {
               }
             },
             itemBuilder: (_) => [
-              if (user.role.isFaculty)
-                const PopupMenuItem(
-                    value: 'profile', child: Text('Thông tin cá nhân')),
+              const PopupMenuItem(
+                  value: 'profile',
+                  child: Text('Thông tin cá nhân & ảnh đại diện')),
               const PopupMenuItem(
                   value: 'password', child: Text('Đổi mật khẩu')),
               const PopupMenuItem(
@@ -298,11 +299,7 @@ class _TopBar extends StatelessWidget {
             ],
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primary,
-                  child: Text(user.fullName.characters.last,
-                      style: const TextStyle(color: Colors.white)),
-                ),
+                UserAvatar(name: user.fullName, url: user.avatarUrl),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

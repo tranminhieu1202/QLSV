@@ -10,6 +10,7 @@ import '../../widgets/common.dart';
 import '../../widgets/export_button.dart';
 import 'student_detail_screen.dart';
 import '../../widgets/revision_reload.dart';
+import '../../widgets/user_avatar.dart';
 
 class WarningsScreen extends StatefulWidget {
   const WarningsScreen({super.key});
@@ -110,10 +111,10 @@ class _WarningsScreenState extends State<WarningsScreen>
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: c.withValues(alpha: 0.15),
-                  child: Text(d.student.fullName.characters.last,
-                      style: TextStyle(color: c, fontWeight: FontWeight.bold)),
+                UserAvatar(
+                  name: d.student.fullName,
+                  url: d.student.avatarUrl,
+                  color: c,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

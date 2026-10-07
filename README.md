@@ -199,3 +199,40 @@ flutter analyze && flutter test
 - **Cấu hình Supabase**: `lib/data/supabase_config.dart` (URL + publishable key). Schema nằm trong `supabase/migrations/`, edge functions trong `supabase/functions/`.
 - **Phát hành bản mới**: gắn tag `vX.Y.Z` lên `main` rồi push. GitHub Actions sẽ build, chạy test, đóng gói bộ cài và tạo Release; ứng dụng đã cài sẽ tự nhận bản mới.
 - **Nhập danh sách sinh viên**: xem hướng dẫn ở đầu `tools/import_students.py`. File SQL sinh ra chứa dữ liệu cá nhân, được đặt trong `data_import/` (đã gitignore) và **không được commit**.
+
+---
+
+## 5. Việc cần làm tiếp
+
+### 5.1. Ảnh đại diện (code đã xong, chưa bật trên Supabase)
+
+Mọi vai trò đổi ảnh ở menu tài khoản → **Thông tin cá nhân & ảnh đại diện**. Sinh viên còn có thể bấm vào ảnh ở Cổng sinh viên. Ảnh được cắt vuông, thu về 256×256 PNG và lưu ở Storage bucket `avatars`. Hiện tải ảnh lên báo lỗi *Bucket not found* vì chưa chạy migration.
+
+1. Supabase Dashboard → **SQL Editor** → chạy toàn bộ `supabase/migrations/20261007090007_avatars.sql`. Migration này:
+   - thêm cột `profiles.avatar_url`;
+   - tạo bucket `avatars` (công khai, tối đa 1 MB, chỉ PNG/JPG);
+   - đặt quyền: mỗi tài khoản chỉ ghi/xóa thư mục `<uid>/` của mình;
+   - thêm cột `avatar_url` vào view `student_overview`.
+2. Nếu câu `insert into storage.buckets` báo lỗi, tạo bucket bằng tay: **Storage → New bucket**, tên `avatars`, chọn *Public*. Sau đó chạy phần còn lại của file, từ `drop policy if exists avatars_read` trở đi.
+3. Kiểm tra trong **Storage** đã có bucket `avatars` (Public).
+4. Thử trên app với từng vai trò (quản trị, ban chủ nhiệm, trợ lý, CVHT, sinh viên):
+   - tải ảnh lên, đổi ảnh, xóa ảnh;
+   - ảnh hiện ở thanh trên cùng, danh sách tài khoản, hồ sơ sinh viên, Cổng sinh viên và màn Cảnh báo.
+5. Commit và push các thay đổi về ảnh đại diện (hiện chưa commit).
+
+### 5.2. Màn Tổng quan mới chưa vào `main`
+
+Commit `60c3953` (làm lại màn Tổng quan, sửa số liệu biểu đồ) được push lên nhánh `feat/bao-cao-xuat-file` sau khi PR #1 đã merge. Cần mở PR mới từ nhánh này vào `main`: <https://github.com/tranminhieu1202/QLSV/compare/main...feat/bao-cao-xuat-file?expand=1>
+
+### 5.3. Cần khoa xác nhận
+
+- Đang áp **cả 3** điều kiện cảnh báo học vụ của Điều 44. Quy chế cho phép đơn vị chỉ chọn 1–2 điều kiện.
+- Giới hạn số lần cảnh báo đang lấy mức 2 lần liên tiếp thì thuộc diện buộc thôi học.
+- Trọng số điểm thành phần mặc định đang là 30/70.
+
+### 5.4. Trước khi phát hành chính thức
+
+- Đổi Bundle ID macOS khỏi `com.example.qlgdEdu` sang ID của khoa.
+- Build và chạy thử bản macOS lần đầu. Job `build-macos` chỉ chạy khi gắn tag `v*` và chưa từng được chạy thử.
+- Gói macOS chưa ký số/notarize: hoặc ký số, hoặc hướng dẫn người dùng chuột phải → *Open* ở lần mở đầu.
+- Thử thủ công trên app: khai báo học phần & điểm, ghi nhớ đăng nhập.

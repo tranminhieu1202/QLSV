@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/academic.dart';
@@ -263,6 +265,44 @@ class Repository {
     } on PostgrestException catch (e) {
       return e.message;
     }
+  }
+
+  /// Tải ảnh đại diện (PNG đã thu nhỏ) của chính mình lên Storage và lưu
+  /// đường dẫn vào hồ sơ. Trả về thông báo lỗi hoặc null nếu thành công.
+  Future<String?> uploadOwnAvatar(Uint8List png) async {
+    final uid = _sb.auth.currentUser?.id;
+    if (uid == null) return 'Chưa đăng nhập.';
+    final path = '$uid/avatar.png';
+    try {
+      await _sb.storage.from('avatars').uploadBinary(
+            path,
+            png,
+            fileOptions:
+                const FileOptions(contentType: 'image/png', upsert: true),
+          );
+      // Thêm tham số phiên bản để ảnh mới không bị cache cũ che mất.
+      final url = '${_sb.storage.from('avatars').getPublicUrl(path)}'
+          '?v=${DateTime.now().millisecondsSinceEpoch}';
+      return updateOwnProfile({'avatar_url': url});
+    } on StorageException catch (e) {
+      if (e.message.toLowerCase().contains('bucket not found')) {
+        return 'Chưa có kho ảnh "avatars" trên Supabase – cần chạy migration '
+            '20261007090007_avatars.sql.';
+      }
+      return 'Không tải được ảnh lên: ${e.message}';
+    }
+  }
+
+  /// Xóa ảnh đại diện của chính mình.
+  Future<String?> removeOwnAvatar() async {
+    final uid = _sb.auth.currentUser?.id;
+    if (uid == null) return 'Chưa đăng nhập.';
+    try {
+      await _sb.storage.from('avatars').remove(['$uid/avatar.png']);
+    } on StorageException catch (_) {
+      // Ảnh không còn trên Storage thì vẫn xóa đường dẫn trong hồ sơ.
+    }
+    return updateOwnProfile({'avatar_url': null});
   }
 
   // ------------------------------------------------- quản lý tài khoản (admin)

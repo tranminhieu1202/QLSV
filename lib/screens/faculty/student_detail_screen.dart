@@ -7,6 +7,7 @@ import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/profile_edit_dialog.dart';
 import '../../widgets/student_progress_view.dart';
+import '../../widgets/user_avatar.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   const StudentDetailScreen({super.key, required this.student});
@@ -191,17 +192,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                s.fullName.characters.last,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
+            UserAvatar(name: s.fullName, url: s.avatarUrl, radius: 32),
             const SizedBox(width: 20),
             Expanded(
               child: Column(

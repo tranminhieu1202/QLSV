@@ -6,6 +6,7 @@ import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/revision_reload.dart';
+import '../../widgets/user_avatar.dart';
 
 /// Màn quản trị: xem và tạo tài khoản cán bộ cấp dưới (BCN khoa / trợ lý QT / CVHT).
 class AccountsScreen extends StatefulWidget {
@@ -122,10 +123,10 @@ class _AccountsScreenState extends State<AccountsScreen>
   Widget _tile(AppUser u) {
     final me = context.read<AppState>().user;
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: u.active ? AppColors.primary : AppColors.textMuted,
-        child: Text(u.fullName.characters.last,
-            style: const TextStyle(color: Colors.white)),
+      leading: UserAvatar(
+        name: u.fullName,
+        url: u.avatarUrl,
+        color: u.active ? AppColors.primary : AppColors.textMuted,
       ),
       title: Row(
         children: [
