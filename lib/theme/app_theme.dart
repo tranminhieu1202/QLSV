@@ -19,6 +19,36 @@ class AppColors {
   static const Color info = Color(0xFF1565C0);
 }
 
+/// Màu cho biểu đồ (đã kiểm tra phân biệt được cả với người mù màu, trên nền
+/// thẻ trắng). Màu chữ dùng [AppColors]; màu chuỗi chỉ dùng cho hình vẽ.
+class VizColors {
+  // Hai nhóm danh mục (vd đúng / chậm tiến độ).
+  static const Color series1 = Color(0xFF2A78D6);
+  static const Color series2 = Color(0xFFEB6834);
+
+  /// Mức độ có thứ tự (cảnh báo lần 1 → lần 2 → buộc thôi học): một tông đỏ
+  /// đậm dần.
+  static const List<Color> severity = [
+    Color(0xFFEC8584),
+    Color(0xFFD03B3B),
+    Color(0xFF8F2020),
+  ];
+
+  /// Thang xếp loại (Yếu → Xuất sắc): một tông xanh đậm dần.
+  static const List<Color> ordinalBlue = [
+    Color(0xFF86B6EF),
+    Color(0xFF5598E7),
+    Color(0xFF2A78D6),
+    Color(0xFF1C5CAB),
+    Color(0xFF104281),
+  ];
+
+  static const Color grid = Color(0xFFE1E0D9);
+  static const Color baseline = Color(0xFFC3C2B7);
+  static const Color axisText = Color(0xFF6B6A65);
+  static const Color tooltipBg = Color(0xFF1F2933);
+}
+
 class AppTheme {
   static ThemeData light() {
     final base = ThemeData(
@@ -31,8 +61,9 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.bg,
       // Segoe UI chỉ có trên Windows; macOS dùng font hệ thống (SF Pro), vốn
       // hiển thị tiếng Việt tốt.
-      fontFamily:
-          defaultTargetPlatform == TargetPlatform.windows ? 'Segoe UI' : null,
+      fontFamily: defaultTargetPlatform == TargetPlatform.windows
+          ? 'Segoe UI'
+          : null,
     );
 
     return base.copyWith(
@@ -59,16 +90,17 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFD0D5DD)),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       dividerTheme: const DividerThemeData(space: 1, thickness: 1),
