@@ -188,7 +188,58 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 
 ---
 
-## 4. Hướng dẫn cho lập trình viên
+## 4. Đưa app lên Mac App Store & cập nhật
+
+### 4.1. Chuẩn bị (làm một lần)
+
+1. **Đăng ký Apple Developer Program** tại [developer.apple.com/programs](https://developer.apple.com/programs/) – phí $99/năm (~2.400.000 VNĐ), chờ duyệt 24–48 giờ.
+
+2. **Đổi Bundle ID** – hiện tại là `com.example.qlgdEdu`, Apple sẽ từ chối. Sửa trong `macos/Runner/Configs/AppInfo.xcconfig`:
+   ```diff
+   -PRODUCT_BUNDLE_IDENTIFIER = com.example.qlgdEdu
+   +PRODUCT_BUNDLE_IDENTIFIER = edu.vnu.qlgd
+   ```
+
+3. **Tạo App ID** trên Apple Developer Portal: Certificates, Identifiers & Profiles → Identifiers → + → App IDs → macOS → nhập Bundle ID mới, bật capability **Network (Client)**.
+
+4. **Tạo Certificate & Provisioning Profile**:
+   - Certificate: tạo **Mac App Distribution** và **Mac Installer Distribution** (dùng CSR từ Keychain Access).
+   - Profile: tạo **Mac App Store** provisioning profile, chọn App ID và certificate vừa tạo.
+
+5. **Cấu hình signing trong Xcode**: mở `macos/Runner.xcworkspace` → Runner target → Signing & Capabilities → chọn Team, Provisioning Profile, Signing Certificate = Mac App Distribution.
+
+6. **Tạo app trên App Store Connect** tại [appstoreconnect.apple.com](https://appstoreconnect.apple.com/): New App → macOS → điền tên, Bundle ID, SKU, mô tả, screenshots (1280×800 hoặc 2560×1600), Privacy Policy URL, category = Education.
+
+### 4.2. Build & upload lên App Store
+
+```bash
+flutter clean
+flutter build macos --release
+open macos/Runner.xcworkspace   # mở Xcode
+```
+
+Trong Xcode: Product → Archive → Distribute App → App Store Connect → Upload. Chờ Apple xử lý (5–30 phút), sau đó vào App Store Connect chọn build, điền thông tin và Submit for Review (thường duyệt trong 24–48 giờ).
+
+### 4.3. Quy trình cập nhật mỗi bản mới
+
+1. **Tăng version** trong `pubspec.yaml` — build number (sau dấu `+`) phải tăng dần mỗi lần upload:
+   ```diff
+   -version: 1.0.0+1
+   +version: 1.0.1+2
+   ```
+2. **Build, Archive & Upload** như mục 4.2.
+3. Trên App Store Connect: + Version or Platform → nhập version mới → chọn build → ghi What's New → Submit for Review.
+4. **Người dùng nhận bản mới tự động** qua App Store (tab Updates hoặc Automatic Updates).
+
+### 4.4. Lưu ý
+
+- **App Sandbox bắt buộc** cho Mac App Store — app đã bật sẵn trong Entitlements.
+- Nếu muốn phân phối ngoài App Store (qua website), chỉ cần **Notarize** app thay vì submit review — nhanh hơn và không cần chờ duyệt.
+- Hiện tại app đã có cơ chế cập nhật qua GitHub Releases; khi lên App Store thì App Store sẽ lo việc cập nhật, hai kênh có thể chạy song song.
+
+---
+
+## 5. Hướng dẫn cho lập trình viên
 
 ```bash
 flutter pub get
