@@ -102,14 +102,16 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
 | Báo cáo | `excel`, `pdf`, `file_selector`; biểu đồ bằng `fl_chart` |
 | Phát hành | GitHub Actions + Inno Setup, cập nhật qua GitHub Releases |
 
-Quy mô hiện tại: khoảng 8.700 dòng Dart, 1.500 dòng SQL/TypeScript/Python, và các test tự động cho tính toán học vụ, lọc/sắp xếp, xuất file và giao diện tiêu đề cột.
+Quy mô hiện tại: khoảng 9.800 dòng Dart, 700 dòng SQL/TypeScript/Python, 600 dòng test tự động cho tính toán học vụ, lọc/sắp xếp, xuất file và giao diện tiêu đề cột.
 
 ```
 lib/
   data/       Repository (Supabase), AcademicService (GPA/CPA/cảnh báo),
               ReportService/ReportExporter (báo cáo, Excel, PDF), cập nhật app
   models/     Student, Course, Enrollment, StudentProgress, AppUser
+  providers/  AppState (quản lý trạng thái toàn cục)
   screens/    faculty/ (cán bộ), student/ (sinh viên), đăng nhập, hoạt động
+  theme/      AppTheme, AppColors (hệ màu Material 3)
   widgets/    thành phần dùng chung (thẻ thống kê, tiêu đề cột, nút xuất…)
 supabase/     migrations (schema, view, RLS), edge functions
 tools/        script nhập danh sách sinh viên từ Excel
@@ -165,6 +167,7 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 | Máy chủ Supabase | Gói miễn phí sẽ **tạm dừng project khi lâu không dùng** và giới hạn dung lượng; dùng thật nên chọn gói trả phí (khoảng 25 USD/tháng tại thời điểm viết; xem giá hiện hành trên trang Supabase) |
 | Bảo trì, hỗ trợ, cập nhật theo quy chế mới | Thường **15 – 20% giá trị hợp đồng/năm** |
 | Chứng thư ký số mã nguồn (tùy chọn) | Giúp Windows không cảnh báo "ứng dụng không rõ nguồn gốc" khi cài |
+| Apple Developer Program (nếu phát hành trên Mac App Store) | $99/năm (~2.400.000 VNĐ) |
 
 ### 3.3. Hạng mục mở rộng (báo giá thêm nếu khách cần)
 
