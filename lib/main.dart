@@ -38,7 +38,9 @@ class _QlgdAppState extends State<QlgdApp> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
+    if (UpdateService.enabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkUpdate());
+    }
   }
 
   Future<void> _checkUpdate() async {

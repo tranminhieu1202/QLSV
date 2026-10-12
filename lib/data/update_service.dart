@@ -26,6 +26,11 @@ class UpdateService {
   static const _repo = 'QLSV';
   static const releasesUrl = 'https://github.com/$_owner/$_repo/releases';
 
+  /// Bản phát hành qua Mac App Store (build với `--dart-define=APP_STORE=true`).
+  /// Apple không cho app tự cập nhật ngoài App Store (Guideline 2.4.5),
+  /// nên bản này tắt hẳn kênh GitHub Releases.
+  static const enabled = !bool.fromEnvironment('APP_STORE');
+
   /// Trả về [UpdateInfo] nếu có bản mới hơn; null nếu đã mới nhất / lỗi mạng.
   Future<UpdateInfo?> check() async {
     try {

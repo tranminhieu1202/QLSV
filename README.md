@@ -23,7 +23,7 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
 
 ### 1.2. Các màn hình dành cho cán bộ
 
-- **Tổng quan**: số sinh viên, số SV cần chú ý (từ cảnh báo học vụ lần 2), số SV nợ tín chỉ, CPA trung bình; biểu đồ phân bố mức cảnh báo và số SV theo khóa.
+- **Tổng quan**: lọc theo khóa cho toàn màn hình; 5 chỉ số chính (sinh viên, bị cảnh báo học vụ kèm số diện buộc thôi học, chậm tiến độ, nợ tín chỉ, CPA trung bình của SV đã có điểm); biểu đồ cảnh báo học vụ và tiến độ đào tạo theo năm học, phân bố CPA theo xếp loại (rê chuột xem số liệu, bấm nút bảng để xem dạng bảng); danh sách sinh viên cần chú ý, bấm để mở hồ sơ.
 - **Sinh viên**
   - Danh sách có tìm kiếm theo MSSV/họ tên.
   - Tiêu đề cột kiểu Excel: bấm để sắp xếp, menu lọc giá trị theo Khóa / Lớp / CVHT.
@@ -188,7 +188,81 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 
 ---
 
-## 4. Hướng dẫn cho lập trình viên
+## 4. Đưa app lên Mac App Store & cập nhật
+
+### 4.0. Đánh giá tính khả thi
+
+**Kết luận: khả thi.** Phần mã nguồn đã sẵn sàng; phần còn lại là thủ tục với Apple (tài khoản, chứng chỉ, hồ sơ app) và phải làm trên máy Mac.
+
+| Hạng mục | Trạng thái | Ghi chú |
+|---|:-:|---|
+| App Sandbox, quyền mạng, quyền lưu/mở file do người dùng chọn | ✅ Có sẵn | `Release.entitlements`: `app-sandbox`, `network.client`, `files.user-selected.read-write`. Xuất Excel/PDF và chọn ảnh đại diện đều dùng hộp thoại hệ thống nên chạy được trong sandbox |
+| Bundle ID riêng | ✅ Đã đổi | `edu.vnu.qlgd`. Nếu tài khoản Apple không thuộc ĐHQGHN, có thể đổi sang ID khác, miễn là đổi trước lần upload đầu tiên |
+| Tắt tự cập nhật qua GitHub ở bản App Store | ✅ Đã làm | Apple **cấm** app trên Mac App Store tự cập nhật ngoài App Store (Guideline 2.4.5). Build với `--dart-define=APP_STORE=true` sẽ ẩn mục "Kiểm tra cập nhật" và không kiểm tra lúc khởi động |
+| Danh mục app & khai báo mã hóa | ✅ Đã thêm | `Info.plist`: `LSApplicationCategoryType = education`; `ITSAppUsesNonExemptEncryption = false` (app chỉ dùng HTTPS), nên không phải trả lời câu hỏi xuất khẩu mã hóa mỗi lần upload |
+| Icon 1024×1024 | ✅ Có sẵn | `AppIcon.appiconset` |
+| macOS tối thiểu | ✅ 12.0 | |
+| Tài khoản Apple Developer | ⏳ Cần làm | Đăng ký dưới tên **tổ chức** thì cần số **D-U-N-S** (miễn phí, mất 1–2 tuần). Đăng ký cá nhân thì trên App Store sẽ hiện tên cá nhân là nhà phát hành |
+| Chứng chỉ, provisioning profile, Archive | ⏳ Cần máy Mac | Không làm được trên Windows |
+| Chính sách quyền riêng tư (Privacy Policy URL) | ⏳ Cần làm | Bắt buộc. App xử lý dữ liệu cá nhân của sinh viên: họ tên, MSSV, ngày sinh, điểm, ảnh đại diện. Phần **App Privacy** trên App Store Connect phải khai đúng các loại dữ liệu này |
+| Tài khoản demo cho Apple duyệt | ⏳ Cần làm | App bắt buộc đăng nhập, nên phải cấp cho Apple 1 tài khoản cán bộ và 1 tài khoản sinh viên chứa dữ liệu mẫu, **không** dùng dữ liệu thật |
+
+**Rủi ro bị từ chối cần lưu ý:**
+
+- **App chỉ dành cho người trong một khoa** (Guideline 3.2 / 4.2): Apple có thể từ chối đăng công khai một app nội bộ. Hướng xử lý, theo thứ tự ưu tiên:
+  1. Xin **Unlisted App Distribution**: app vẫn nằm trên Mac App Store và cập nhật bình thường, nhưng không hiện khi tìm kiếm, chỉ ai có link mới cài được. Đây là hình thức phù hợp nhất với app nội bộ.
+  2. Phát hành **Custom App** qua Apple School Manager / Business Manager của trường.
+  3. Không lên App Store: phân phối qua website bằng bản **ký Developer ID + Notarize**, tức là giữ kênh GitHub Releases hiện tại nhưng không còn bị Gatekeeper cảnh báo.
+- **Xóa tài khoản** (Guideline 5.1.1(v)): yêu cầu này chỉ áp dụng khi app cho phép người dùng *tự tạo* tài khoản. QLGD EDU chỉ có quản trị viên tạo tài khoản, nên khi gửi duyệt hãy nói rõ điều này trong phần *Notes for Review*.
+
+### 4.1. Chuẩn bị (làm một lần)
+
+1. **Đăng ký Apple Developer Program** tại [developer.apple.com/programs](https://developer.apple.com/programs/) – phí $99/năm (~2.400.000 VNĐ), chờ duyệt 24–48 giờ.
+
+2. **Bundle ID** – đã đổi từ `com.example.qlgdEdu` sang `edu.vnu.qlgd` trong `macos/Runner/Configs/AppInfo.xcconfig`. Lưu ý: bản macOS tải từ GitHub trước đây dùng ID cũ, nên sau khi chuyển sang bản mới, người dùng sẽ phải đăng nhập lại một lần.
+
+3. **Tạo App ID** trên Apple Developer Portal: Certificates, Identifiers & Profiles → Identifiers → + → App IDs → App → nhập Bundle ID `edu.vnu.qlgd`. Không cần bật thêm capability nào; quyền mạng và quyền file đã khai trong entitlements chứ không nằm ở App ID.
+
+4. **Tạo Certificate & Provisioning Profile**:
+   - Certificate: tạo **Mac App Distribution** và **Mac Installer Distribution** (dùng CSR từ Keychain Access).
+   - Profile: tạo **Mac App Store** provisioning profile, chọn App ID và certificate vừa tạo.
+
+5. **Cấu hình signing trong Xcode**: mở `macos/Runner.xcworkspace` → Runner target → Signing & Capabilities → chọn Team, Provisioning Profile, Signing Certificate = Mac App Distribution.
+
+6. **Tạo app trên App Store Connect** tại [appstoreconnect.apple.com](https://appstoreconnect.apple.com/): New App → macOS → điền tên, Bundle ID, SKU, mô tả, screenshots (1280×800 hoặc 2560×1600), Privacy Policy URL, category = Education.
+
+### 4.2. Build & upload lên App Store
+
+```bash
+flutter clean
+flutter build macos --release --dart-define=APP_STORE=true   # BẮT BUỘC có cờ này
+open macos/Runner.xcworkspace   # mở Xcode
+```
+
+> Khi chạy `flutter build`, cờ `APP_STORE` được ghi vào `macos/Flutter/ephemeral/Flutter-Generated.xcconfig`, và bước Archive trong Xcode sẽ dùng lại cờ đó. Vì vậy phải chạy lệnh trên **ngay trước khi** Archive. Nếu thiếu cờ, app sẽ còn chức năng tự cập nhật qua GitHub và bị Apple từ chối.
+
+Trong Xcode: Product → Archive → Distribute App → App Store Connect → Upload. Chờ Apple xử lý (5–30 phút), sau đó vào App Store Connect chọn build, điền thông tin và Submit for Review (thường duyệt trong 24–48 giờ).
+
+### 4.3. Quy trình cập nhật mỗi bản mới
+
+1. **Tăng version** trong `pubspec.yaml` — build number (sau dấu `+`) phải tăng dần mỗi lần upload:
+   ```diff
+   -version: 1.0.0+1
+   +version: 1.0.1+2
+   ```
+2. **Build, Archive & Upload** như mục 4.2.
+3. Trên App Store Connect: + Version or Platform → nhập version mới → chọn build → ghi What's New → Submit for Review.
+4. **Người dùng nhận bản mới tự động** qua App Store (tab Updates hoặc Automatic Updates).
+
+### 4.4. Lưu ý
+
+- **App Sandbox bắt buộc** cho Mac App Store — app đã bật sẵn trong Entitlements.
+- Nếu muốn phân phối ngoài App Store (qua website), chỉ cần **Notarize** app thay vì submit review — nhanh hơn và không cần chờ duyệt.
+- Hai kênh phát hành có thể chạy song song, nhưng **mỗi bản build chỉ thuộc một kênh**. Bản GitHub (Windows, macOS tải zip) tự cập nhật qua GitHub Releases như hiện nay. Bản App Store build với `APP_STORE=true` và chỉ được App Store cập nhật.
+
+---
+
+## 5. Hướng dẫn cho lập trình viên
 
 ```bash
 flutter pub get
@@ -199,40 +273,3 @@ flutter analyze && flutter test
 - **Cấu hình Supabase**: `lib/data/supabase_config.dart` (URL + publishable key). Schema nằm trong `supabase/migrations/`, edge functions trong `supabase/functions/`.
 - **Phát hành bản mới**: gắn tag `vX.Y.Z` lên `main` rồi push. GitHub Actions sẽ build, chạy test, đóng gói bộ cài và tạo Release; ứng dụng đã cài sẽ tự nhận bản mới.
 - **Nhập danh sách sinh viên**: xem hướng dẫn ở đầu `tools/import_students.py`. File SQL sinh ra chứa dữ liệu cá nhân, được đặt trong `data_import/` (đã gitignore) và **không được commit**.
-
----
-
-## 5. Việc cần làm tiếp
-
-### 5.1. Ảnh đại diện (code đã xong, chưa bật trên Supabase)
-
-Mọi vai trò đổi ảnh ở menu tài khoản → **Thông tin cá nhân & ảnh đại diện**. Sinh viên còn có thể bấm vào ảnh ở Cổng sinh viên. Ảnh được cắt vuông, thu về 256×256 PNG và lưu ở Storage bucket `avatars`. Hiện tải ảnh lên báo lỗi *Bucket not found* vì chưa chạy migration.
-
-1. Supabase Dashboard → **SQL Editor** → chạy toàn bộ `supabase/migrations/20261007090007_avatars.sql`. Migration này:
-   - thêm cột `profiles.avatar_url`;
-   - tạo bucket `avatars` (công khai, tối đa 1 MB, chỉ PNG/JPG);
-   - đặt quyền: mỗi tài khoản chỉ ghi/xóa thư mục `<uid>/` của mình;
-   - thêm cột `avatar_url` vào view `student_overview`.
-2. Nếu câu `insert into storage.buckets` báo lỗi, tạo bucket bằng tay: **Storage → New bucket**, tên `avatars`, chọn *Public*. Sau đó chạy phần còn lại của file, từ `drop policy if exists avatars_read` trở đi.
-3. Kiểm tra trong **Storage** đã có bucket `avatars` (Public).
-4. Thử trên app với từng vai trò (quản trị, ban chủ nhiệm, trợ lý, CVHT, sinh viên):
-   - tải ảnh lên, đổi ảnh, xóa ảnh;
-   - ảnh hiện ở thanh trên cùng, danh sách tài khoản, hồ sơ sinh viên, Cổng sinh viên và màn Cảnh báo.
-5. Commit và push các thay đổi về ảnh đại diện (hiện chưa commit).
-
-### 5.2. Màn Tổng quan mới chưa vào `main`
-
-Commit `60c3953` (làm lại màn Tổng quan, sửa số liệu biểu đồ) được push lên nhánh `feat/bao-cao-xuat-file` sau khi PR #1 đã merge. Cần mở PR mới từ nhánh này vào `main`: <https://github.com/tranminhieu1202/QLSV/compare/main...feat/bao-cao-xuat-file?expand=1>
-
-### 5.3. Cần khoa xác nhận
-
-- Đang áp **cả 3** điều kiện cảnh báo học vụ của Điều 44. Quy chế cho phép đơn vị chỉ chọn 1–2 điều kiện.
-- Giới hạn số lần cảnh báo đang lấy mức 2 lần liên tiếp thì thuộc diện buộc thôi học.
-- Trọng số điểm thành phần mặc định đang là 30/70.
-
-### 5.4. Trước khi phát hành chính thức
-
-- Đổi Bundle ID macOS khỏi `com.example.qlgdEdu` sang ID của khoa.
-- Build và chạy thử bản macOS lần đầu. Job `build-macos` chỉ chạy khi gắn tag `v*` và chưa từng được chạy thử.
-- Gói macOS chưa ký số/notarize: hoặc ký số, hoặc hướng dẫn người dùng chuột phải → *Open* ở lần mở đầu.
-- Thử thủ công trên app: khai báo học phần & điểm, ghi nhớ đăng nhập.

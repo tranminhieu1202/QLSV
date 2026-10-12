@@ -293,8 +293,9 @@ class _TopBar extends StatelessWidget {
                   child: Text('Thông tin cá nhân & ảnh đại diện')),
               const PopupMenuItem(
                   value: 'password', child: Text('Đổi mật khẩu')),
-              const PopupMenuItem(
-                  value: 'update', child: Text('Kiểm tra cập nhật')),
+              if (UpdateService.enabled)
+                const PopupMenuItem(
+                    value: 'update', child: Text('Kiểm tra cập nhật')),
               const PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
             ],
             child: Row(
