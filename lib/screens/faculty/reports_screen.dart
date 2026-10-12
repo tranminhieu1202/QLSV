@@ -409,52 +409,81 @@ class _ReportsScreenState extends State<ReportsScreen> with RevisionReload {
             const Expanded(
                 child: Center(
                     child: Text('Không có sinh viên nào thỏa tiêu chí.')))
-          else ...[
-            Container(
-              color: AppColors.tableHeader,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(children: [
-                for (final c in cols)
-                  _previewCell(c, _header(c)),
-              ]),
-            ),
+          else
             Expanded(
-              child: Scrollbar(
-                child: ListView.builder(
-                  itemExtent: 40,
-                  itemCount: rows.length,
-                  itemBuilder: (_, i) => DecoratedBox(
-                    decoration: const BoxDecoration(
-                      border:
-                          Border(bottom: BorderSide(color: Color(0xFFEDEFF2))),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(children: [
-                        for (final c in cols)
-                          _previewCell(
-                            c,
-                            c == ReportColumn.academicLevel
-                                ? FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: LevelBadge(
-                                        level: rows[i].progress.academicLevel,
-                                        text: c.textOf(rows[i], i)),
-                                  )
-                                : Text(c.textOf(rows[i], i),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1),
+              child: HorizontalOverflow(
+                minWidth: _tableMinWidth(cols),
+                child: LayoutBuilder(builder: (_, box) {
+                  final widths = _columnWidths(cols, box.maxWidth);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        color: AppColors.tableHeader,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        child: Row(children: [
+                          for (var k = 0; k < cols.length; k++)
+                            _previewCell(cols[k], widths[k], _header(cols[k])),
+                        ]),
+                      ),
+                      Expanded(
+                        child: Scrollbar(
+                          child: ListView.builder(
+                            itemExtent: 40,
+                            itemCount: rows.length,
+                            itemBuilder: (_, i) => DecoratedBox(
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                    bottom:
+                                        BorderSide(color: Color(0xFFEDEFF2))),
+                              ),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: Row(children: [
+                                  for (var k = 0; k < cols.length; k++)
+                                    _previewCell(cols[k], widths[k],
+                                        _cellOf(cols[k], rows[i], i)),
+                                ]),
+                              ),
+                            ),
                           ),
-                      ]),
-                    ),
-                  ),
-                ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
               ),
             ),
-          ],
         ],
       ),
     );
+  }
+
+  Widget _cellOf(ReportColumn c, StudentWithProgress row, int i) =>
+      c == ReportColumn.academicLevel
+          ? FittedBox(
+              fit: BoxFit.scaleDown,
+              child: LevelBadge(
+                  level: row.progress.academicLevel, text: c.textOf(row, i)),
+            )
+          : Text(c.textOf(row, i));
+
+  /// Cột hẹp nhất vẫn đủ chỗ cho vài chữ + mũi tên sắp xếp + nút ▾.
+  static double _minColWidth(ReportColumn c) =>
+      (c.weight * 28).clamp(76, double.infinity).toDouble();
+
+  static double _tableMinWidth(List<ReportColumn> cols) =>
+      cols.fold(32.0, (sum, c) => sum + _minColWidth(c));
+
+  /// Mỗi cột nhận mức tối thiểu, phần dư chia theo trọng số.
+  static List<double> _columnWidths(List<ReportColumn> cols, double total) {
+    final extra = (total - _tableMinWidth(cols)).clamp(0, double.infinity);
+    final weights = cols.fold(0.0, (sum, c) => sum + c.weight);
+    return [
+      for (final c in cols) _minColWidth(c) + extra * c.weight / weights,
+    ];
   }
 
   /// Tiêu đề cột kiểu Excel; Khóa/Lớp lọc được và đồng bộ với bảng tiêu chí.
@@ -480,8 +509,8 @@ class _ReportsScreenState extends State<ReportsScreen> with RevisionReload {
     );
   }
 
-  Widget _previewCell(ReportColumn c, Widget child) => Expanded(
-        flex: (c.weight * 10).round(),
+  Widget _previewCell(ReportColumn c, double width, Widget child) => SizedBox(
+        width: width,
         child: Padding(
           padding: const EdgeInsets.only(right: 8),
           child: Align(

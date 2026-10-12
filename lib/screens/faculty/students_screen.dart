@@ -203,22 +203,25 @@ class _StudentsScreenState extends State<StudentsScreen>
     }
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          _headerRow(),
-          const Divider(height: 1),
-          Expanded(
-            child: Scrollbar(
-              child: ListView.builder(
-                // Fixed row height lets the list virtualize efficiently so
-                // scrolling stays smooth even with thousands of students.
-                itemExtent: 52,
-                itemCount: _view.length,
-                itemBuilder: (context, i) => _dataRow(i + 1, _view[i]),
+      child: HorizontalOverflow(
+        minWidth: _tableMinWidth,
+        child: Column(
+          children: [
+            _headerRow(),
+            const Divider(height: 1),
+            Expanded(
+              child: Scrollbar(
+                child: ListView.builder(
+                  // Fixed row height lets the list virtualize efficiently so
+                  // scrolling stays smooth even with thousands of students.
+                  itemExtent: 52,
+                  itemCount: _view.length,
+                  itemBuilder: (context, i) => _dataRow(i + 1, _view[i]),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -357,6 +360,11 @@ const _columns = <_Col>[
   _Col('Cảnh báo', width: 116, sort: ReportColumn.academicLevel),
   _Col('', width: 92),
 ];
+
+/// Chiều rộng tối thiểu của bảng: cột cố định + mỗi phần flex ≥ 64px + lề 32.
+/// Hẹp hơn thì bảng cuộn ngang thay vì ép cột co đến mức tràn.
+final double _tableMinWidth =
+    _columns.fold(32.0, (sum, c) => sum + (c.width ?? c.flex * 64.0));
 
 /// Dialog for creating a new student and their login account.
 class _StudentDialog extends StatefulWidget {
