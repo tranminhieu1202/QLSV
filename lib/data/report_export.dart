@@ -179,6 +179,9 @@ class ReportExporter {
 
     doc.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4.landscape,
+      // Mặc định MultiPage chỉ cho 20 trang -> TooManyPagesException khi xuất
+      // vài trăm sinh viên.
+      maxPages: 1000,
       margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 32),
       header: (ctx) => ctx.pageNumber == 1
           ? pw.SizedBox()

@@ -90,6 +90,7 @@ class AppUser {
   final String? studentCode; // set when role == student
   final String? phone;
   final String? email;
+  final String? avatarUrl; // ảnh đại diện (Storage bucket `avatars`)
   final bool active;
 
   const AppUser({
@@ -100,6 +101,7 @@ class AppUser {
     this.studentCode,
     this.phone,
     this.email,
+    this.avatarUrl,
     this.active = true,
   });
 
@@ -111,6 +113,7 @@ class AppUser {
         studentCode: m['student_code'] as String?,
         phone: m['phone'] as String?,
         email: m['email'] as String?,
+        avatarUrl: m['avatar_url'] as String?,
         active: (m['active'] as bool?) ?? true,
       );
 }

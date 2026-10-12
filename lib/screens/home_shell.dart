@@ -8,6 +8,7 @@ import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/my_profile_dialog.dart';
+import '../widgets/user_avatar.dart';
 import '../widgets/update_dialog.dart';
 import 'activity_screen.dart';
 import 'faculty/accounts_screen.dart';
@@ -157,8 +158,15 @@ class _SideRail extends StatelessWidget {
           ),
           const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 12),
-          for (var i = 0; i < items.length; i++) _railItem(i, items[i]),
-          const Spacer(),
+          // Cuộn được khi cửa sổ thấp (màn hình MacBook) thay vì tràn đáy.
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                for (var i = 0; i < items.length; i++) _railItem(i, items[i]),
+              ],
+            ),
+          ),
           const Divider(color: Colors.white24, height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -166,9 +174,13 @@ class _SideRail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(user.fullName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w600)),
                 Text(user.role.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style:
                         const TextStyle(color: Colors.white70, fontSize: 12)),
               ],
@@ -237,8 +249,8 @@ class _TopBar extends StatelessWidget {
             child: Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 16),
           Container(
@@ -291,30 +303,30 @@ class _TopBar extends StatelessWidget {
               }
             },
             itemBuilder: (_) => [
-              if (user.role.isFaculty)
-                const PopupMenuItem(
-                    value: 'profile', child: Text('Thông tin cá nhân')),
+              const PopupMenuItem(
+                  value: 'profile',
+                  child: Text('Thông tin cá nhân & ảnh đại diện')),
               const PopupMenuItem(
                   value: 'password', child: Text('Đổi mật khẩu')),
-              const PopupMenuItem(
-                  value: 'update', child: Text('Kiểm tra cập nhật')),
+              if (UpdateService.enabled)
+                const PopupMenuItem(
+                    value: 'update', child: Text('Kiểm tra cập nhật')),
               const PopupMenuItem(value: 'logout', child: Text('Đăng xuất')),
             ],
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primary,
-                  child: Text(user.fullName.characters.last,
-                      style: const TextStyle(color: Colors.white)),
-                ),
+                UserAvatar(name: user.fullName, url: user.avatarUrl),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(user.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     Text(user.role.label,
+                        maxLines: 1,
                         style: const TextStyle(
                             fontSize: 12, color: AppColors.textMuted)),
                   ],

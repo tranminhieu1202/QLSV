@@ -57,6 +57,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true,
       title: const Text('Đổi mật khẩu'),
       content: SizedBox(
         width: 380,

@@ -193,17 +193,38 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 
 ## 4. Đưa app lên Mac App Store & cập nhật
 
+### 4.0. Đánh giá tính khả thi
+
+**Kết luận: khả thi.** Phần mã nguồn đã sẵn sàng; phần còn lại là thủ tục với Apple (tài khoản, chứng chỉ, hồ sơ app) và phải làm trên máy Mac.
+
+| Hạng mục | Trạng thái | Ghi chú |
+|---|:-:|---|
+| App Sandbox, quyền mạng, quyền lưu/mở file do người dùng chọn | ✅ Có sẵn | `Release.entitlements`: `app-sandbox`, `network.client`, `files.user-selected.read-write`. Xuất Excel/PDF và chọn ảnh đại diện đều dùng hộp thoại hệ thống nên chạy được trong sandbox |
+| Bundle ID riêng | ✅ Đã đổi | `edu.vnu.qlgd`. Nếu tài khoản Apple không thuộc ĐHQGHN, có thể đổi sang ID khác, miễn là đổi trước lần upload đầu tiên |
+| Tắt tự cập nhật qua GitHub ở bản App Store | ✅ Đã làm | Apple **cấm** app trên Mac App Store tự cập nhật ngoài App Store (Guideline 2.4.5). Build với `--dart-define=APP_STORE=true` sẽ ẩn mục "Kiểm tra cập nhật" và không kiểm tra lúc khởi động |
+| Danh mục app & khai báo mã hóa | ✅ Đã thêm | `Info.plist`: `LSApplicationCategoryType = education`; `ITSAppUsesNonExemptEncryption = false` (app chỉ dùng HTTPS), nên không phải trả lời câu hỏi xuất khẩu mã hóa mỗi lần upload |
+| Icon 1024×1024 | ✅ Có sẵn | `AppIcon.appiconset` |
+| macOS tối thiểu | ✅ 12.0 | |
+| Tài khoản Apple Developer | ⏳ Cần làm | Đăng ký dưới tên **tổ chức** thì cần số **D-U-N-S** (miễn phí, mất 1–2 tuần). Đăng ký cá nhân thì trên App Store sẽ hiện tên cá nhân là nhà phát hành |
+| Chứng chỉ, provisioning profile, Archive | ⏳ Cần máy Mac | Không làm được trên Windows |
+| Chính sách quyền riêng tư (Privacy Policy URL) | ⏳ Cần làm | Bắt buộc. App xử lý dữ liệu cá nhân của sinh viên: họ tên, MSSV, ngày sinh, điểm, ảnh đại diện. Phần **App Privacy** trên App Store Connect phải khai đúng các loại dữ liệu này |
+| Tài khoản demo cho Apple duyệt | ⏳ Cần làm | App bắt buộc đăng nhập, nên phải cấp cho Apple 1 tài khoản cán bộ và 1 tài khoản sinh viên chứa dữ liệu mẫu, **không** dùng dữ liệu thật |
+
+**Rủi ro bị từ chối cần lưu ý:**
+
+- **App chỉ dành cho người trong một khoa** (Guideline 3.2 / 4.2): Apple có thể từ chối đăng công khai một app nội bộ. Hướng xử lý, theo thứ tự ưu tiên:
+  1. Xin **Unlisted App Distribution**: app vẫn nằm trên Mac App Store và cập nhật bình thường, nhưng không hiện khi tìm kiếm, chỉ ai có link mới cài được. Đây là hình thức phù hợp nhất với app nội bộ.
+  2. Phát hành **Custom App** qua Apple School Manager / Business Manager của trường.
+  3. Không lên App Store: phân phối qua website bằng bản **ký Developer ID + Notarize**, tức là giữ kênh GitHub Releases hiện tại nhưng không còn bị Gatekeeper cảnh báo.
+- **Xóa tài khoản** (Guideline 5.1.1(v)): yêu cầu này chỉ áp dụng khi app cho phép người dùng *tự tạo* tài khoản. QLGD EDU chỉ có quản trị viên tạo tài khoản, nên khi gửi duyệt hãy nói rõ điều này trong phần *Notes for Review*.
+
 ### 4.1. Chuẩn bị (làm một lần)
 
 1. **Đăng ký Apple Developer Program** tại [developer.apple.com/programs](https://developer.apple.com/programs/) – phí $99/năm (~2.400.000 VNĐ), chờ duyệt 24–48 giờ.
 
-2. **Đổi Bundle ID** – hiện tại là `com.example.qlgdEdu`, Apple sẽ từ chối. Sửa trong `macos/Runner/Configs/AppInfo.xcconfig`:
-   ```diff
-   -PRODUCT_BUNDLE_IDENTIFIER = com.example.qlgdEdu
-   +PRODUCT_BUNDLE_IDENTIFIER = edu.vnu.qlgd
-   ```
+2. **Bundle ID** – đã đổi từ `com.example.qlgdEdu` sang `edu.vnu.qlgd` trong `macos/Runner/Configs/AppInfo.xcconfig`. Lưu ý: bản macOS tải từ GitHub trước đây dùng ID cũ, nên sau khi chuyển sang bản mới, người dùng sẽ phải đăng nhập lại một lần.
 
-3. **Tạo App ID** trên Apple Developer Portal: Certificates, Identifiers & Profiles → Identifiers → + → App IDs → macOS → nhập Bundle ID mới, bật capability **Network (Client)**.
+3. **Tạo App ID** trên Apple Developer Portal: Certificates, Identifiers & Profiles → Identifiers → + → App IDs → App → nhập Bundle ID `edu.vnu.qlgd`. Không cần bật thêm capability nào; quyền mạng và quyền file đã khai trong entitlements chứ không nằm ở App ID.
 
 4. **Tạo Certificate & Provisioning Profile**:
    - Certificate: tạo **Mac App Distribution** và **Mac Installer Distribution** (dùng CSR từ Keychain Access).
@@ -217,9 +238,11 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 
 ```bash
 flutter clean
-flutter build macos --release
+flutter build macos --release --dart-define=APP_STORE=true   # BẮT BUỘC có cờ này
 open macos/Runner.xcworkspace   # mở Xcode
 ```
+
+> Khi chạy `flutter build`, cờ `APP_STORE` được ghi vào `macos/Flutter/ephemeral/Flutter-Generated.xcconfig`, và bước Archive trong Xcode sẽ dùng lại cờ đó. Vì vậy phải chạy lệnh trên **ngay trước khi** Archive. Nếu thiếu cờ, app sẽ còn chức năng tự cập nhật qua GitHub và bị Apple từ chối.
 
 Trong Xcode: Product → Archive → Distribute App → App Store Connect → Upload. Chờ Apple xử lý (5–30 phút), sau đó vào App Store Connect chọn build, điền thông tin và Submit for Review (thường duyệt trong 24–48 giờ).
 
@@ -238,7 +261,7 @@ Trong Xcode: Product → Archive → Distribute App → App Store Connect → Up
 
 - **App Sandbox bắt buộc** cho Mac App Store — app đã bật sẵn trong Entitlements.
 - Nếu muốn phân phối ngoài App Store (qua website), chỉ cần **Notarize** app thay vì submit review — nhanh hơn và không cần chờ duyệt.
-- Hiện tại app đã có cơ chế cập nhật qua GitHub Releases; khi lên App Store thì App Store sẽ lo việc cập nhật, hai kênh có thể chạy song song.
+- Hai kênh phát hành có thể chạy song song, nhưng **mỗi bản build chỉ thuộc một kênh**. Bản GitHub (Windows, macOS tải zip) tự cập nhật qua GitHub Releases như hiện nay. Bản App Store build với `APP_STORE=true` và chỉ được App Store cập nhật.
 
 ---
 

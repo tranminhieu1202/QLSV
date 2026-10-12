@@ -14,6 +14,7 @@ class Student {
   final String? birthDate; // ngày tháng sinh (yyyy-MM-dd hoặc dd/MM/yyyy)
   final String? hometown; // quê quán
   final String? email; // email cá nhân
+  final String? avatarUrl; // ảnh đại diện của tài khoản sinh viên
 
   const Student({
     required this.id,
@@ -31,6 +32,7 @@ class Student {
     this.birthDate,
     this.hometown,
     this.email,
+    this.avatarUrl,
   });
 
   /// Năm nhập học suy ra từ mã sinh viên theo quy định của trường: 2 chữ số
@@ -58,5 +60,6 @@ class Student {
         birthDate: m['birth_date'] as String?,
         hometown: m['hometown'] as String?,
         email: m['email'] as String?,
+        avatarUrl: m['avatar_url'] as String?,
       );
 }
