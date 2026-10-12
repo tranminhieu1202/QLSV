@@ -41,6 +41,16 @@ class SortFilterHeader extends StatelessWidget {
     if (col == null || onSort == null) {
       return Text(label, style: style, overflow: TextOverflow.ellipsis);
     }
+    // Ô quá hẹp không chứa nổi mũi tên + nút ▾: chỉ hiện tên, không tràn.
+    return LayoutBuilder(builder: (context, box) {
+      if (box.maxWidth < 48) {
+        return Text(label, style: style, overflow: TextOverflow.ellipsis);
+      }
+      return _full(context, col, style);
+    });
+  }
+
+  Widget _full(BuildContext context, ReportColumn col, TextStyle style) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

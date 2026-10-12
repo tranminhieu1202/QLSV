@@ -160,3 +160,45 @@ class EnrollStatusChip extends StatelessWidget {
     );
   }
 }
+
+/// Giữ bảng rộng ít nhất [minWidth]; khi cửa sổ hẹp hơn (vd MacBook) thì cuộn
+/// ngang thay vì ép các cột co đến mức tràn. Cần chiều cao bị chặn.
+class HorizontalOverflow extends StatefulWidget {
+  const HorizontalOverflow(
+      {super.key, required this.minWidth, required this.child});
+  final double minWidth;
+  final Widget child;
+
+  @override
+  State<HorizontalOverflow> createState() => _HorizontalOverflowState();
+}
+
+class _HorizontalOverflowState extends State<HorizontalOverflow> {
+  final _ctrl = ScrollController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, box) {
+      if (box.maxWidth >= widget.minWidth) return widget.child;
+      return Scrollbar(
+        controller: _ctrl,
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          controller: _ctrl,
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: widget.minWidth,
+            height: box.maxHeight,
+            child: widget.child,
+          ),
+        ),
+      );
+    });
+  }
+}
