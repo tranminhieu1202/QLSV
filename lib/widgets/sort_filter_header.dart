@@ -88,7 +88,6 @@ class SortFilterHeader extends StatelessWidget {
       tooltip: 'Sắp xếp / lọc theo $label',
       padding: EdgeInsets.zero,
       iconSize: 16,
-      constraints: const BoxConstraints.tightFor(width: 20, height: 20),
       icon: Icon(
         _filtered ? Icons.filter_alt : Icons.arrow_drop_down,
         size: 16,
