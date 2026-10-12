@@ -64,6 +64,15 @@ class SortFilterHeader extends StatelessWidget {
   }
 
   Widget _menu(BuildContext context, ReportColumn col) {
+    // Nút ▾ mặc định chiếm 40–48px, ở cột hẹp sẽ đè mất tên cột.
+    return SizedBox(
+      width: 22,
+      height: 24,
+      child: _menuButton(context, col),
+    );
+  }
+
+  Widget _menuButton(BuildContext context, ReportColumn col) {
     return PopupMenuButton<String>(
       tooltip: 'Sắp xếp / lọc theo $label',
       padding: EdgeInsets.zero,

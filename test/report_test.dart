@@ -186,6 +186,23 @@ void main() {
     expect(bytes.length, greaterThan(5000));
   });
 
+  test('xuất PDF hàng trăm sinh viên không vướng giới hạn 20 trang', () async {
+    pw.Font font(String f) =>
+        pw.Font.ttf(File('assets/fonts/$f').readAsBytesSync().buffer.asByteData());
+    final many = ReportData(
+      title: 'Danh sách sinh viên',
+      criteria: const [],
+      columns: ReportColumn.values,
+      rows: [for (var i = 0; i < 300; i++) ...all],
+      generatedBy: 'Quản trị',
+      generatedAt: DateTime(2026, 10, 5, 9, 30),
+    );
+    final bytes = await ReportExporter.buildPdf(many,
+        regular: font('BeVietnamPro-Regular.ttf'),
+        bold: font('BeVietnamPro-Bold.ttf'));
+    expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+  });
+
   test('tên file gợi ý bỏ ký tự không hợp lệ', () {
     final r = ReportData(
       title: 'DS: SV/năm 2?',

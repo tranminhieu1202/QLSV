@@ -487,7 +487,13 @@ class _ReportsScreenState extends State<ReportsScreen> with RevisionReload {
           child: Align(
             alignment:
                 c.numeric ? Alignment.centerRight : Alignment.centerLeft,
-            child: child,
+            // Hàng cao cố định: chữ không được xuống dòng (font macOS rộng hơn).
+            child: DefaultTextStyle.merge(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              child: child,
+            ),
           ),
         ),
       );

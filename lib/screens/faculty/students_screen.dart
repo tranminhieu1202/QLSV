@@ -227,7 +227,14 @@ class _StudentsScreenState extends State<StudentsScreen>
     final spec = _columns[idx];
     final aligned = Align(
       alignment: Alignment.centerLeft,
-      child: child,
+      // Hàng cao cố định (itemExtent): chữ không được xuống dòng, kẻo tràn đáy
+      // trên macOS nơi font hệ thống rộng hơn Segoe UI.
+      child: DefaultTextStyle.merge(
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
+        child: child,
+      ),
     );
     return spec.width != null
         ? SizedBox(width: spec.width, child: aligned)

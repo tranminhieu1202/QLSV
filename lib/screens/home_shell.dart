@@ -158,8 +158,15 @@ class _SideRail extends StatelessWidget {
           ),
           const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 12),
-          for (var i = 0; i < items.length; i++) _railItem(i, items[i]),
-          const Spacer(),
+          // Cuộn được khi cửa sổ thấp (màn hình MacBook) thay vì tràn đáy.
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                for (var i = 0; i < items.length; i++) _railItem(i, items[i]),
+              ],
+            ),
+          ),
           const Divider(color: Colors.white24, height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -167,9 +174,13 @@ class _SideRail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(user.fullName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w600)),
                 Text(user.role.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style:
                         const TextStyle(color: Colors.white70, fontSize: 12)),
               ],
@@ -234,9 +245,13 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(title,
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Flexible(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          ),
           const SizedBox(width: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -307,8 +322,11 @@ class _TopBar extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(user.fullName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     Text(user.role.label,
+                        maxLines: 1,
                         style: const TextStyle(
                             fontSize: 12, color: AppColors.textMuted)),
                   ],

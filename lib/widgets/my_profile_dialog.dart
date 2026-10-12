@@ -68,6 +68,7 @@ class _MyProfileDialogState extends State<MyProfileDialog> {
     final u = _state.user;
     final isStudent = u != null && !u.role.isFaculty;
     return AlertDialog(
+      scrollable: true,
       title: const Text('Thông tin cá nhân'),
       content: SizedBox(
         width: 400,
