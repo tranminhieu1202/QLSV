@@ -135,10 +135,14 @@ class _SideRail extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
             child: Row(
-              children: const [
-                Icon(Icons.school, color: AppColors.accent, size: 30),
-                SizedBox(width: 10),
-                Expanded(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset('assets/images/logo.png',
+                      width: 40, height: 40),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

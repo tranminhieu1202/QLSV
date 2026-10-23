@@ -84,7 +84,11 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.school, color: Colors.white, size: 72),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset('assets/images/logo.png',
+                    width: 96, height: 96),
+              ),
               const SizedBox(height: 24),
               const Text(
                 'HỆ THỐNG QUẢN LÝ ĐÀO TẠO',
