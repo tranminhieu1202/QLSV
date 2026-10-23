@@ -79,5 +79,6 @@ flutter:
 
   # Font tiếng Việt nhúng vào file PDF xuất báo cáo (SIL OFL, xem OFL.txt).
   assets:
+    - assets/images/logo.png
     - assets/fonts/BeVietnamPro-Regular.ttf
     - assets/fonts/BeVietnamPro-Bold.ttf
