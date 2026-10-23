@@ -55,6 +55,9 @@ class UpdateService {
     } catch (_) {
       throw UpdateCheckException('Không kết nối được máy chủ cập nhật.');
     }
+    if (res.statusCode == 403 || res.statusCode == 429) {
+      return _checkViaRedirect(pkg.version);
+    }
     if (res.statusCode == 404) {
       throw UpdateCheckException(
           'Không tìm thấy bản phát hành trên GitHub (repo private hoặc chưa có release).');
@@ -92,6 +95,43 @@ class UpdateService {
     }
   }
 
+  /// API GitHub chỉ cho 60 lượt/giờ mỗi IP, nhiều máy chung mạng trường dễ
+  /// vượt. Khi đó đọc tag từ link chuyển hướng `/releases/latest` (không bị
+  /// giới hạn) và dựng link file cài theo quy ước đặt tên của CI.
+  Future<UpdateInfo?> _checkViaRedirect(String current) async {
+    final client = http.Client();
+    try {
+      final req = http.Request('GET', Uri.parse('$releasesUrl/latest'))
+        ..followRedirects = false;
+      final resp = await client.send(req).timeout(const Duration(seconds: 10));
+      await resp.stream.drain<void>();
+      final m = RegExp(r'/releases/tag/([^/?#]+)$')
+          .firstMatch(resp.headers['location'] ?? '');
+      if (m == null) {
+        throw UpdateCheckException(
+            'Máy chủ cập nhật đang giới hạn lượt truy cập, thử lại sau.');
+      }
+      final tag = m.group(1)!;
+      final latest = tag.replaceFirst(RegExp(r'^v'), '');
+      if (!_isNewer(latest, current)) return null;
+      final file = Platform.isMacOS
+          ? 'qlgd_edu-$latest-macos.zip'
+          : 'qlgd_edu-setup-$latest.exe';
+      return UpdateInfo(
+        version: latest,
+        notes: '',
+        installerUrl: '$releasesUrl/download/$tag/$file',
+        pageUrl: '$releasesUrl/tag/$tag',
+      );
+    } on UpdateCheckException {
+      rethrow;
+    } catch (_) {
+      throw UpdateCheckException('Không kết nối được máy chủ cập nhật.');
+    } finally {
+      client.close();
+    }
+  }
+
   bool _isNewer(String latest, String current) {
     List<int> parts(String v) =>
         v.split('.').map((s) => int.tryParse(s.split('+').first) ?? 0).toList();
@@ -113,16 +153,25 @@ class UpdateService {
     final dir = await getTemporaryDirectory();
     final file = File(p.join(dir.path, 'qlgd_edu-setup-${info.version}.exe'));
 
-    final resp = await http.Client().send(http.Request('GET', Uri.parse(url)));
-    final total = resp.contentLength ?? 0;
-    final sink = file.openWrite();
-    var received = 0;
-    await for (final chunk in resp.stream) {
-      received += chunk.length;
-      sink.add(chunk);
-      if (total > 0) onProgress?.call(received / total);
+    final client = http.Client();
+    try {
+      final resp = await client.send(http.Request('GET', Uri.parse(url)));
+      // Không kiểm tra thì trang lỗi 404/403 bị lưu thành .exe rồi chạy.
+      if (resp.statusCode != 200) {
+        throw Exception('máy chủ trả lỗi HTTP ${resp.statusCode}.');
+      }
+      final total = resp.contentLength ?? 0;
+      final sink = file.openWrite();
+      var received = 0;
+      await for (final chunk in resp.stream) {
+        received += chunk.length;
+        sink.add(chunk);
+        if (total > 0) onProgress?.call(received / total);
+      }
+      await sink.close();
+    } finally {
+      client.close();
     }
-    await sink.close();
 
     await Process.start(file.path, const [],
         mode: ProcessStartMode.detached);

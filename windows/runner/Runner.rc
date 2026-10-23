@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.qlgd" "\0"
-            VALUE "FileDescription", "qlgd_edu" "\0"
+            VALUE "FileDescription", "QLGD EDU" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "qlgd_edu" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.qlgd. All rights reserved." "\0"
             VALUE "OriginalFilename", "qlgd_edu.exe" "\0"
-            VALUE "ProductName", "qlgd_edu" "\0"
+            VALUE "ProductName", "QLGD EDU" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
