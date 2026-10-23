@@ -17,6 +17,9 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Ghim phiên bản trùng máy dev: bản stable mới có thể thêm lint làm
+          # `flutter analyze` trên CI fail dù máy dev vẫn sạch.
+          flutter-version: 3.44.5
           cache: true
 
       - name: Lấy số phiên bản từ tag
@@ -48,6 +51,8 @@ jobs:
           generate_release_notes: true
 
   build-macos:
+    # Chờ bản Windows qua analyze/test để không phát hành release thiếu file cài.
+    needs: build
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +60,9 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Ghim phiên bản trùng máy dev: bản stable mới có thể thêm lint làm
+          # `flutter analyze` trên CI fail dù máy dev vẫn sạch.
+          flutter-version: 3.44.5
           cache: true
 
       - run: flutter pub get
