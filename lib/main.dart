@@ -44,7 +44,10 @@ class _QlgdAppState extends State<QlgdApp> {
   }
 
   Future<void> _checkUpdate() async {
-    final info = await UpdateService().check();
+    // Lúc khởi động: lỗi thì im lặng, người dùng vẫn kiểm tra tay được.
+    final info = await UpdateService()
+        .check()
+        .onError<UpdateCheckException>((_, _) => null);
     final ctx = _navKey.currentContext;
     if (info != null && ctx != null && ctx.mounted) {
       showDialog(context: ctx, builder: (_) => UpdateDialog(info: info));

@@ -27,7 +27,9 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build windows --release
+      # Lấy phiên bản từ tag để app luôn báo đúng phiên bản, kể cả khi quên
+      # sửa pubspec.yaml (nếu không, app sẽ báo cập nhật mãi không dứt).
+      - run: flutter build windows --release --build-name=${{ steps.ver.outputs.version }} --build-number=${{ github.run_number }}
 
       - name: Cài Inno Setup
         run: choco install innosetup --no-progress -y
@@ -57,7 +59,7 @@ jobs:
 
       - run: flutter pub get
       - run: flutter test
-      - run: flutter build macos --release
+      - run: flutter build macos --release --build-name=${GITHUB_REF_NAME#v} --build-number=${{ github.run_number }}
 
       # Bản chưa ký/notarize: lần đầu mở bằng chuột phải → Open.
       - name: Đóng gói .zip

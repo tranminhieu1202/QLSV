@@ -293,16 +293,22 @@ class _TopBar extends StatelessWidget {
                   builder: (_) => const ChangePasswordDialog(),
                 );
               } else if (v == 'update') {
-                final info = await UpdateService().check();
-                if (!context.mounted) return;
-                if (info != null) {
-                  showDialog(
-                    context: context,
-                    builder: (_) => UpdateDialog(info: info),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Đã là phiên bản mới nhất.')));
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  final info = await UpdateService().check();
+                  if (!context.mounted) return;
+                  if (info != null) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => UpdateDialog(info: info),
+                    );
+                  } else {
+                    messenger.showSnackBar(const SnackBar(
+                        content: Text('Đã là phiên bản mới nhất.')));
+                  }
+                } on UpdateCheckException catch (e) {
+                  messenger.showSnackBar(SnackBar(
+                      content: Text('Không kiểm tra được cập nhật: $e')));
                 }
               }
             },

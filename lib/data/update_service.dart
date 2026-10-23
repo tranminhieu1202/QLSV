@@ -20,7 +20,16 @@ class UpdateInfo {
   });
 }
 
+/// Không kiểm tra được cập nhật (mất mạng, repo private/không tồn tại, ...).
+class UpdateCheckException implements Exception {
+  final String message;
+  UpdateCheckException(this.message);
+  @override
+  String toString() => message;
+}
+
 /// Kiểm tra & tải cập nhật qua GitHub Releases (phương án A).
+/// Repo phải để public: API GitHub trả 404 cho repo private khi không đăng nhập.
 class UpdateService {
   static const _owner = 'tranminhieu1202';
   static const _repo = 'QLSV';
@@ -31,17 +40,30 @@ class UpdateService {
   /// nên bản này tắt hẳn kênh GitHub Releases.
   static const enabled = !bool.fromEnvironment('APP_STORE');
 
-  /// Trả về [UpdateInfo] nếu có bản mới hơn; null nếu đã mới nhất / lỗi mạng.
+  /// Trả về [UpdateInfo] nếu có bản mới hơn, null nếu đã là bản mới nhất.
+  /// Ném [UpdateCheckException] khi không kiểm tra được, để không báo nhầm
+  /// "đã mới nhất".
   Future<UpdateInfo?> check() async {
+    final pkg = await PackageInfo.fromPlatform();
+    final http.Response res;
     try {
-      final pkg = await PackageInfo.fromPlatform();
-      final res = await http.get(
+      res = await http.get(
         Uri.parse(
             'https://api.github.com/repos/$_owner/$_repo/releases/latest'),
         headers: {'Accept': 'application/vnd.github+json'},
       ).timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200) return null;
-
+    } catch (_) {
+      throw UpdateCheckException('Không kết nối được máy chủ cập nhật.');
+    }
+    if (res.statusCode == 404) {
+      throw UpdateCheckException(
+          'Không tìm thấy bản phát hành trên GitHub (repo private hoặc chưa có release).');
+    }
+    if (res.statusCode != 200) {
+      throw UpdateCheckException(
+          'Máy chủ cập nhật trả lỗi HTTP ${res.statusCode}.');
+    }
+    try {
       final json = jsonDecode(res.body) as Map<String, dynamic>;
       final latest =
           ((json['tag_name'] as String?) ?? '').replaceFirst(RegExp(r'^v'), '');
@@ -66,7 +88,7 @@ class UpdateService {
         pageUrl: (json['html_url'] as String?) ?? releasesUrl,
       );
     } catch (_) {
-      return null; // im lặng khi không có mạng
+      throw UpdateCheckException('Dữ liệu bản phát hành không hợp lệ.');
     }
   }
 
