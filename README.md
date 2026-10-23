@@ -204,7 +204,7 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 | Tắt tự cập nhật qua GitHub ở bản App Store | ✅ Đã làm | Apple **cấm** app trên Mac App Store tự cập nhật ngoài App Store (Guideline 2.4.5). Build với `--dart-define=APP_STORE=true` sẽ ẩn mục "Kiểm tra cập nhật" và không kiểm tra lúc khởi động |
 | Danh mục app & khai báo mã hóa | ✅ Đã thêm | `Info.plist`: `LSApplicationCategoryType = education`; `ITSAppUsesNonExemptEncryption = false` (app chỉ dùng HTTPS), nên không phải trả lời câu hỏi xuất khẩu mã hóa mỗi lần upload |
 | Icon 1024×1024 | ✅ Có sẵn | `AppIcon.appiconset` |
-| macOS tối thiểu | ✅ 12.0 | |
+| macOS tối thiểu | ✅ 13.0 | Gói `objective_c` (native asset của Dart) build với macOS 13, nên app không thể khai thấp hơn |
 | Tài khoản Apple Developer | ⏳ Cần làm | Đăng ký dưới tên **tổ chức** thì cần số **D-U-N-S** (miễn phí, mất 1–2 tuần). Đăng ký cá nhân thì trên App Store sẽ hiện tên cá nhân là nhà phát hành |
 | Chứng chỉ, provisioning profile, Archive | ⏳ Cần máy Mac | Không làm được trên Windows |
 | Chính sách quyền riêng tư (Privacy Policy URL) | ⏳ Cần làm | Bắt buộc. App xử lý dữ liệu cá nhân của sinh viên: họ tên, MSSV, ngày sinh, điểm, ảnh đại diện. Phần **App Privacy** trên App Store Connect phải khai đúng các loại dữ liệu này |
@@ -236,15 +236,22 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 
 ### 4.2. Build & upload lên App Store
 
+Trên máy Mac đã đăng nhập tài khoản Apple trong Xcode (Settings → Accounts) và có API key App Store Connect tại `~/.appstoreconnect/private_keys/AuthKey_<KEY_ID>.p8`:
+
 ```bash
-flutter clean
-flutter build macos --release --dart-define=APP_STORE=true   # BẮT BUỘC có cờ này
-open macos/Runner.xcworkspace   # mở Xcode
+tools/release_appstore.sh              # build, ký, upload rồi chờ Apple xử lý xong
+tools/release_appstore.sh --no-upload  # chỉ tạo build/appstore/QLGD EDU.pkg để kiểm tra
 ```
 
-> Khi chạy `flutter build`, cờ `APP_STORE` được ghi vào `macos/Flutter/ephemeral/Flutter-Generated.xcconfig`, và bước Archive trong Xcode sẽ dùng lại cờ đó. Vì vậy phải chạy lệnh trên **ngay trước khi** Archive. Nếu thiếu cờ, app sẽ còn chức năng tự cập nhật qua GitHub và bị Apple từ chối.
+Script tự làm các bước dễ sai khi làm tay:
 
-Trong Xcode: Product → Archive → Distribute App → App Store Connect → Upload. Chờ Apple xử lý (5–30 phút), sau đó vào App Store Connect chọn build, điền thông tin và Submit for Review (thường duyệt trong 24–48 giờ).
+- build với `--dart-define=APP_STORE=true` để tắt tự cập nhật qua GitHub;
+- **gỡ chữ ký riêng của các `*.bundle` tài nguyên SwiftPM** trong `Contents/Resources`. Xcode ký chúng bằng chứng chỉ Development và không ký lại khi export, khiến Apple từ chối với lỗi **ITMS-90284**. Các bundle không chứa mã chạy nên chữ ký Apple Distribution của app sẽ bao phủ chúng;
+- báo lỗi nếu build number đã dùng, và in lỗi ITMS nếu Apple từ chối build.
+
+Đừng Archive → Upload trực tiếp từ Xcode: build sẽ bị từ chối vì lỗi ITMS-90284 nói trên. Lỗi xử lý build không hiện trên TestFlight; xem bằng `python3 tools/asc_api.py GET "/v1/apps/6826131512/buildUploads?limit=3"`.
+
+Sau khi build sẵn sàng, vào App Store Connect chọn build và Submit for Review (thường duyệt trong 24–48 giờ).
 
 ### 4.3. Quy trình cập nhật mỗi bản mới
 
@@ -253,7 +260,7 @@ Trong Xcode: Product → Archive → Distribute App → App Store Connect → Up
    -version: 1.0.0+1
    +version: 1.0.1+2
    ```
-2. **Build, Archive & Upload** như mục 4.2.
+2. **Build & upload**: chạy `tools/release_appstore.sh` (mục 4.2).
 3. Trên App Store Connect: + Version or Platform → nhập version mới → chọn build → ghi What's New → Submit for Review.
 4. **Người dùng nhận bản mới tự động** qua App Store (tab Updates hoặc Automatic Updates).
 
