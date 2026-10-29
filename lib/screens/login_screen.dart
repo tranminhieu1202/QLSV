@@ -16,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passCtrl = TextEditingController();
   bool _obscure = true;
   late bool _remember;
-  String? _demoStudent;
 
   @override
   void initState() {
@@ -24,12 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final state = context.read<AppState>();
     _remember = state.rememberLogin;
     _userCtrl.text = state.lastUsername;
-    _loadDemoStudent();
-  }
-
-  Future<void> _loadDemoStudent() async {
-    final code = await context.read<AppState>().repo.demoStudentCode();
-    if (mounted) setState(() => _demoStudent = code);
   }
 
   @override
@@ -42,11 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() => context
       .read<AppState>()
       .login(_userCtrl.text, _passCtrl.text, remember: _remember);
-
-  void _fill(String u) {
-    _userCtrl.text = u;
-    _passCtrl.text = '123456';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,24 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
-            const SizedBox(height: 28),
-            const Divider(),
-            const SizedBox(height: 12),
-            const Text('Tài khoản demo (mật khẩu: 123456)',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _demoChip('admin', 'Quản trị'),
-                _demoChip('dean', 'BCN Khoa'),
-                _demoChip('assistant', 'Trợ lý QT'),
-                _demoChip('advisor1', 'CVHT'),
-                if (_demoStudent != null)
-                  _demoChip(_demoStudent!, 'Sinh viên'),
-              ],
-            ),
           ],
         ),
       ),
@@ -231,11 +201,5 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
         ),
-      );
-
-  Widget _demoChip(String username, String label) => ActionChip(
-        avatar: const Icon(Icons.login, size: 16),
-        label: Text('$label · $username'),
-        onPressed: () => _fill(username),
       );
 }

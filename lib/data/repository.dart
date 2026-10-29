@@ -389,10 +389,6 @@ class Repository {
   }
 
   Future<String> currentTerm() => _get('current_term', defaultTerm);
-  Future<String?> demoStudentCode() async {
-    final v = await _get('demo_student_code', '');
-    return v.isEmpty ? null : v;
-  }
 
   Future<void> setCurrentTerm(String term, AppUser actor) async {
     await _set('current_term', term);
