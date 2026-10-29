@@ -50,32 +50,7 @@ jobs:
           files: dist/*.exe
           generate_release_notes: true
 
-  build-macos:
-    # Chờ bản Windows qua analyze/test để không phát hành release thiếu file cài.
-    needs: build
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          # Ghim phiên bản trùng máy dev: bản stable mới có thể thêm lint làm
-          # `flutter analyze` trên CI fail dù máy dev vẫn sạch.
-          flutter-version: 3.44.5
-          cache: true
-
-      - run: flutter pub get
-      - run: flutter test
-      - run: flutter build macos --release --build-name=${GITHUB_REF_NAME#v} --build-number=${{ github.run_number }}
-
-      # Bản chưa ký/notarize: lần đầu mở bằng chuột phải → Open.
-      - name: Đóng gói .zip
-        run: |
-          mkdir -p dist
-          ditto -c -k --sequesterRsrc --keepParent "build/macos/Build/Products/Release/QLGD EDU.app" "dist/qlgd_edu-${GITHUB_REF_NAME#v}-macos.zip"
-
-      - name: Đính kèm vào GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*-macos.zip
+  # Bản macOS không build ở đây: cần ký Developer ID + notarize bằng tài khoản
+  # Apple của team, nên chạy tools/release_devid.sh trên máy Mac rồi đính kèm
+  # qlgd_edu-<phiên bản>-macos.zip vào release này. Bản chưa ký do CI build
+  # trước đây bị Gatekeeper chặn, và nếu để CI chạy nó sẽ ghi đè bản đã notarize.
