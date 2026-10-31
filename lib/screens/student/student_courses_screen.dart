@@ -48,10 +48,19 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
       _student = s;
       _courses = courses;
       _enrollments = enrollments;
-      _progress = AcademicService.compute(s, enrollments, courses,
-          term: state.currentTerm);
-      _suggestions = AcademicService.suggest(s, enrollments, courses,
-          term: state.currentTerm, chosenDirection: s.direction);
+      _progress = AcademicService.compute(
+        s,
+        enrollments,
+        courses,
+        term: state.currentTerm,
+      );
+      _suggestions = AcademicService.suggest(
+        s,
+        enrollments,
+        courses,
+        term: state.currentTerm,
+        chosenDirection: s.direction,
+      );
       _loading = false;
     });
   }
@@ -87,12 +96,15 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Xóa khai báo?'),
-        content: Text('Xóa ${e.course?.code} · ${e.course?.name} '
-            'ở kỳ ${e.term} cùng điểm đã nhập?'),
+        content: Text(
+          'Xóa ${e.course?.code} · ${e.course?.name} '
+          'ở kỳ ${e.term} cùng điểm đã nhập?',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Hủy')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.pop(ctx, true),
@@ -103,8 +115,11 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
     );
     if (ok != true || !mounted) return;
     final state = context.read<AppState>();
-    await state.repo.deleteDeclaration(e, state.user!,
-        studentCode: widget.studentCode);
+    await state.repo.deleteDeclaration(
+      e,
+      state.user!,
+      studentCode: widget.studentCode,
+    );
     await state.bumpData();
   }
 
@@ -133,8 +148,10 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
             child: Padding(
               padding: EdgeInsets.all(24),
               child: Center(
-                child: Text('Bạn chưa khai báo học phần nào. Bấm "Nhập điểm '
-                    'cả kỳ" để nhập điểm các học phần của từng học kỳ.'),
+                child: Text(
+                  'Bạn chưa khai báo học phần nào. Bấm "Nhập điểm '
+                  'cả kỳ" để nhập điểm các học phần của từng học kỳ.',
+                ),
               ),
             ),
           ),
@@ -159,15 +176,17 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Khai báo học phần & điểm',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Khai báo học phần & điểm',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   const Text(
-                      'Tự khai báo kỳ nào học học phần nào và điểm đạt được. '
-                      'Lưu là có hiệu lực, không cần duyệt; cố vấn học tập và '
-                      'ban đào tạo khoa theo dõi kết quả của bạn.',
-                      style: TextStyle(color: AppColors.textMuted)),
+                    'Tự khai báo kỳ nào học học phần nào và điểm đạt được. '
+                    'Lưu là có hiệu lực, không cần duyệt; cố vấn học tập và '
+                    'ban đào tạo khoa theo dõi kết quả của bạn.',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 20,
@@ -179,32 +198,37 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                       _metric('CPA', p.cpa.toStringAsFixed(2)),
                       _metric('Năm đào tạo', '${p.trainingYear}'),
                       LevelBadge(
-                          level: p.academicLevel,
-                          text: p.academicLevel == WarnLevel.none
-                              ? 'Không bị cảnh báo'
-                              : null),
+                        level: p.academicLevel,
+                        text: p.academicLevel == WarnLevel.none
+                            ? 'Không bị cảnh báo'
+                            : null,
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _enterTerm(),
-                  icon: const Icon(Icons.table_rows_outlined),
-                  label: const Text('Nhập điểm cả kỳ'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _declare(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Khai báo từng học phần'),
-                ),
-              ],
+            // IntrinsicWidth: hai nút cùng rộng mà không đòi bề rộng vô hạn
+            // trong Row (stretch trần làm phần chữ bên trái bị ép về 0).
+            IntrinsicWidth(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _enterTerm(),
+                    icon: const Icon(Icons.table_rows_outlined),
+                    label: const Text('Nhập điểm cả kỳ'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _declare(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Khai báo từng học phần'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -212,13 +236,20 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
     );
   }
 
-  Widget _metric(String label, String value) => Text.rich(TextSpan(children: [
+  Widget _metric(String label, String value) => Text.rich(
+    TextSpan(
+      children: [
         TextSpan(
-            text: '$label: ',
-            style: const TextStyle(color: AppColors.textMuted)),
+          text: '$label: ',
+          style: const TextStyle(color: AppColors.textMuted),
+        ),
         TextSpan(
-            text: value, style: const TextStyle(fontWeight: FontWeight.w600)),
-      ]));
+          text: value,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
+    ),
+  );
 
   Widget _termCard(String term, List<Enrollment> list) {
     // Điểm TB học kỳ hệ 4 = Σ(hệ 4 × TC) / Σ TC của các học phần đã có điểm,
@@ -245,14 +276,19 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
           children: [
             Row(
               children: [
-                Text('${AcademicService.termLabel(term)} ($term)',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  '${AcademicService.termLabel(term)} ($term)',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Text(
-                    '${list.length} học phần · $credits TC tính điểm'
-                    '${gpa == null ? '' : ' · Điểm TB học kỳ (hệ 4): ${gpa.toStringAsFixed(2)} (${GradeScale.standing(gpa)})'}',
-                    style: const TextStyle(color: AppColors.textMuted)),
+                  '${list.length} học phần · $credits TC tính điểm'
+                  '${gpa == null ? '' : ' · Điểm TB học kỳ (hệ 4): ${gpa.toStringAsFixed(2)} (${GradeScale.standing(gpa)})'}',
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: () => _enterTerm(term),
@@ -279,34 +315,48 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                 ],
                 rows: [
                   for (final e in list)
-                    DataRow(cells: [
-                      DataCell(Text(e.course?.code ?? '')),
-                      DataCell(SizedBox(
-                          width: 260, child: Text(e.course?.name ?? ''))),
-                      DataCell(Text('${e.course?.credits ?? 0}')),
-                      DataCell(Text(e.grade10?.toStringAsFixed(1) ?? '-',
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600))),
-                      DataCell(Text(e.letterText)),
-                      DataCell(Text(e.fourText)),
-                      DataCell(EnrollStatusChip(e.status)),
-                      DataCell(Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip: 'Sửa kỳ / điểm',
-                            icon: const Icon(Icons.edit, size: 18),
-                            onPressed: () => _declare(editing: e),
+                    DataRow(
+                      cells: [
+                        DataCell(Text(e.course?.code ?? '')),
+                        DataCell(
+                          SizedBox(
+                            width: 260,
+                            child: Text(e.course?.name ?? ''),
                           ),
-                          IconButton(
-                            tooltip: 'Xóa',
-                            icon: const Icon(Icons.delete_outline,
-                                size: 18, color: AppColors.danger),
-                            onPressed: () => _delete(e),
+                        ),
+                        DataCell(Text('${e.course?.credits ?? 0}')),
+                        DataCell(
+                          Text(
+                            e.grade10?.toStringAsFixed(1) ?? '-',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                        ],
-                      )),
-                    ]),
+                        ),
+                        DataCell(Text(e.letterText)),
+                        DataCell(Text(e.fourText)),
+                        DataCell(EnrollStatusChip(e.status)),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'Sửa kỳ / điểm',
+                                icon: const Icon(Icons.edit, size: 18),
+                                onPressed: () => _declare(editing: e),
+                              ),
+                              IconButton(
+                                tooltip: 'Xóa',
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: AppColors.danger,
+                                ),
+                                onPressed: () => _delete(e),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -323,11 +373,14 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
       child: ExpansionTile(
         initiallyExpanded: false,
         leading: const Icon(Icons.tips_and_updates, color: AppColors.accent),
-        title: const Text('Gợi ý học phần nên học tiếp',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Gợi ý học phần nên học tiếp',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: const Text(
-            'Dựa trên tiến trình đào tạo, học phần chưa đạt và điều kiện tiên quyết.',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+          'Dựa trên tiến trình đào tạo, học phần chưa đạt và điều kiện tiên quyết.',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+        ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         children: [for (final s in suggestions) _suggestionRow(s)],
       ),
@@ -359,17 +412,19 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    '${s.course.code} · ${s.course.name} (${s.course.credits} TC)',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                  '${s.course.code} · ${s.course.name} (${s.course.credits} TC)',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 Text(
                   s.prerequisiteMet
                       ? s.reason
                       : '${s.reason} · Thiếu tiên quyết ${s.course.prerequisite}',
                   style: TextStyle(
-                      color: s.prerequisiteMet
-                          ? AppColors.textMuted
-                          : AppColors.danger,
-                      fontSize: 12),
+                    color: s.prerequisiteMet
+                        ? AppColors.textMuted
+                        : AppColors.danger,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
