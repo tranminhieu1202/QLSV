@@ -84,7 +84,7 @@ Phải đăng nhập lại khi: bấm *Đăng xuất*, mật khẩu bị đổi,
 
 | Mục | Chức năng |
 |---|---|
-| **Thông tin cá nhân & ảnh đại diện** | Sửa thông tin liên hệ, tải ảnh đại diện |
+| **Thông tin cá nhân** | Cán bộ sửa họ tên và thông tin liên hệ (sinh viên sửa ở *Sửa hồ sơ* trên Trang chủ) |
 | **Đổi mật khẩu** | Nhập mật khẩu mới hai lần (ô *Mật khẩu mới* và *Nhập lại mật khẩu*) |
 | **Kiểm tra cập nhật** | Kiểm tra phiên bản mới (không có ở bản App Store) |
 | **Đăng xuất** | Thoát tài khoản; lần sau phải nhập lại mật khẩu |
@@ -119,7 +119,7 @@ Mọi vai trò đều có màn hình **Hoạt động**: nhật ký các thao t�
 | Quản lý tài khoản cán bộ | ✔ | – | – | – | – |
 | Khai báo học phần, học kỳ, điểm | – | – | – | – | ✔ của mình |
 | Nhật ký hoạt động | ✔ | ✔ | ✔ | ✔ | ✔ |
-| Đổi mật khẩu, sửa thông tin cá nhân, ảnh đại diện | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Đổi mật khẩu, sửa thông tin cá nhân | ✔ | ✔ | ✔ | ✔ | ✔ |
 
 > **Điểm học tập chỉ do sinh viên khai báo.** Cán bộ và cố vấn xem được điểm nhưng không sửa. Nếu điểm sai, cố vấn nhắc sinh viên sửa ở màn hình *Khai báo học tập*.
 

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../models/student.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/my_profile_dialog.dart';
 import '../../widgets/profile_edit_dialog.dart';
 import '../../widgets/student_progress_view.dart';
 import '../../widgets/user_avatar.dart';
@@ -71,11 +70,6 @@ class _StudentPortalScreenState extends State<StudentPortalScreen> {
     }
   }
 
-  Future<void> _editAvatar() => showDialog<void>(
-        context: context,
-        builder: (_) => const MyProfileDialog(),
-      );
-
   Widget _header(Student s) {
     return Card(
       child: Padding(
@@ -83,20 +77,7 @@ class _StudentPortalScreenState extends State<StudentPortalScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Tooltip(
-              message: 'Đổi ảnh đại diện',
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: _editAvatar,
-                child: UserAvatar(
-                  name: s.fullName,
-                  // Ảnh của tài khoản đang đăng nhập cập nhật ngay khi đổi.
-                  url: context.watch<AppState>().user?.avatarUrl ??
-                      s.avatarUrl,
-                  radius: 30,
-                ),
-              ),
-            ),
+            UserAvatar(name: s.fullName, radius: 30),
             const SizedBox(width: 20),
             Expanded(
               child: Column(

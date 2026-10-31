@@ -200,7 +200,7 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 
 | Hạng mục | Trạng thái | Ghi chú |
 |---|:-:|---|
-| App Sandbox, quyền mạng, quyền lưu/mở file do người dùng chọn | ✅ Có sẵn | `Release.entitlements`: `app-sandbox`, `network.client`, `files.user-selected.read-write`. Xuất Excel/PDF và chọn ảnh đại diện đều dùng hộp thoại hệ thống nên chạy được trong sandbox |
+| App Sandbox, quyền mạng, quyền lưu/mở file do người dùng chọn | ✅ Có sẵn | `Release.entitlements`: `app-sandbox`, `network.client`, `files.user-selected.read-write`. Xuất Excel/PDF dùng hộp thoại lưu file của hệ thống nên chạy được trong sandbox |
 | Bundle ID riêng | ✅ Đã đổi | `edu.vnu.qlgd`. Nếu tài khoản Apple không thuộc ĐHQGHN, có thể đổi sang ID khác, miễn là đổi trước lần upload đầu tiên |
 | Tắt tự cập nhật qua GitHub ở bản App Store | ✅ Đã làm | Apple **cấm** app trên Mac App Store tự cập nhật ngoài App Store (Guideline 2.4.5). Build với `--dart-define=APP_STORE=true` sẽ ẩn mục "Kiểm tra cập nhật" và không kiểm tra lúc khởi động |
 | Danh mục app & khai báo mã hóa | ✅ Đã thêm | `Info.plist`: `LSApplicationCategoryType = education`; `ITSAppUsesNonExemptEncryption = false` (app chỉ dùng HTTPS), nên không phải trả lời câu hỏi xuất khẩu mã hóa mỗi lần upload |
@@ -208,7 +208,7 @@ Giá = Tổng ngày công × Đơn giá ngày công × (1 + % dự phòng)
 | macOS tối thiểu | ✅ 13.0 | Gói `objective_c` (native asset của Dart) build với macOS 13, nên app không thể khai thấp hơn |
 | Tài khoản Apple Developer | ⏳ Cần làm | Đăng ký dưới tên **tổ chức** thì cần số **D-U-N-S** (miễn phí, mất 1–2 tuần). Đăng ký cá nhân thì trên App Store sẽ hiện tên cá nhân là nhà phát hành |
 | Chứng chỉ, provisioning profile, Archive | ⏳ Cần máy Mac | Không làm được trên Windows |
-| Chính sách quyền riêng tư (Privacy Policy URL) | ⏳ Cần làm | Bắt buộc. App xử lý dữ liệu cá nhân của sinh viên: họ tên, MSSV, ngày sinh, điểm, ảnh đại diện. Phần **App Privacy** trên App Store Connect phải khai đúng các loại dữ liệu này |
+| Chính sách quyền riêng tư (Privacy Policy URL) | ⏳ Cần làm | Bắt buộc. App xử lý dữ liệu cá nhân của sinh viên: họ tên, MSSV, ngày sinh, điểm. Phần **App Privacy** trên App Store Connect phải khai đúng các loại dữ liệu này |
 | Tài khoản demo cho Apple duyệt | ⏳ Cần làm | App bắt buộc đăng nhập, nên phải cấp cho Apple 1 tài khoản cán bộ và 1 tài khoản sinh viên chứa dữ liệu mẫu, **không** dùng dữ liệu thật |
 
 **Rủi ro bị từ chối cần lưu ý:**

@@ -153,18 +153,6 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  /// Đổi / xóa ảnh đại diện của chính mình ([png] = null để xóa).
-  Future<String?> setMyAvatar(Uint8List? png) async {
-    final err = png == null
-        ? await repo.removeOwnAvatar()
-        : await repo.uploadOwnAvatar(png);
-    if (err != null) return err;
-    final u = await repo.currentProfile();
-    if (u != null) _user = u;
-    await bumpData(); // danh sách / hồ sơ sinh viên hiển thị ảnh mới
-    return null;
-  }
-
   /// Signal that shared data changed – all listening screens will reload.
   Future<void> bumpData() async {
     repo.invalidateCaches();

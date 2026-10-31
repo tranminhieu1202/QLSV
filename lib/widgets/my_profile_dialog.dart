@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
-import 'user_avatar.dart';
 
-/// Cho tài khoản đang đăng nhập tự đổi ảnh đại diện và sửa thông tin cá nhân
-/// (họ tên + liên hệ). Sinh viên sửa hồ sơ ở Cổng sinh viên nên chỉ đổi ảnh.
+/// Cho tài khoản đang đăng nhập tự sửa thông tin cá nhân (họ tên + liên hệ).
+/// Sinh viên sửa hồ sơ ở Cổng sinh viên. Không còn ảnh đại diện (đã gỡ khỏi
+/// Supabase để tránh tràn Storage) – mọi nơi hiện chữ cái đầu của tên.
 class MyProfileDialog extends StatefulWidget {
   const MyProfileDialog({super.key});
 
@@ -84,8 +84,6 @@ class _MyProfileDialogState extends State<MyProfileDialog> {
                   style: const TextStyle(color: AppColors.textMuted),
                 ),
               ),
-            const AvatarEditor(),
-            const Divider(height: 28),
             if (isStudent)
               const Text(
                 'Họ tên, ngày sinh, liên hệ… của sinh viên được sửa ở mục '

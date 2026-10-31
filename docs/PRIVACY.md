@@ -1,6 +1,6 @@
 # Chính sách quyền riêng tư – QLGD EDU
 
-*Cập nhật: 23/10/2026*
+*Cập nhật: 31/10/2026*
 
 QLGD EDU là ứng dụng quản lý tiến trình đào tạo của Khoa Quản lý Giáo dục. Tài liệu này mô tả dữ liệu ứng dụng xử lý và cách dữ liệu được bảo vệ.
 
@@ -11,7 +11,6 @@ QLGD EDU là ứng dụng quản lý tiến trình đào tạo của Khoa Quản
 - **Thông tin tài khoản**: họ tên, tên đăng nhập/email, vai trò.
 - **Hồ sơ sinh viên**: mã sinh viên, lớp, khóa, cố vấn học tập; thông tin liên hệ do sinh viên tự cập nhật (số điện thoại, email, quê quán, ngày sinh).
 - **Kết quả học tập**: học phần, học kỳ và điểm do sinh viên khai báo; các chỉ số tính từ đó (GPA, CPA, cảnh báo học vụ).
-- **Ảnh đại diện** (nếu người dùng tự tải lên).
 - **Nhật ký thao tác**: ai thực hiện thao tác gì và vào lúc nào, phục vụ đối soát.
 
 Trên máy tính, ứng dụng chỉ ghi nhớ tên đăng nhập gần nhất và phiên đăng nhập để tiện sử dụng.
