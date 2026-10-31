@@ -48,7 +48,7 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
 - **Trang chủ**: CPA, GPA kỳ gần nhất, tín chỉ tích lũy và tín chỉ còn thiếu, tín chỉ nợ, % tiến độ, cảnh báo; tiến trình theo từng khối kiến thức.
 - **Khai báo học tập**: sinh viên tự khai báo kỳ nào học học phần nào và được bao nhiêu điểm, bất cứ lúc nào, không cần duyệt. Cố vấn học tập, ban chủ nhiệm/trợ lý khoa và quản trị thấy ngay.
   - Chọn học phần trong CTĐT (gõ mã/tên để tìm) và học kỳ (HK1, HK2, hè từ năm nhập học tới năm học hiện tại).
-  - Nhập **điểm học phần** (hệ 10, như trên bảng điểm), hoặc **điểm thành phần** (bộ phận 30% + cuối kì 70%), hoặc để "Chưa có điểm" (đang học). Điểm chữ, hệ 4 và trạng thái do máy chủ tính.
+  - Chỉ nhập **điểm học phần hệ 10** (điểm tổng kết cuối cùng, như trên bảng điểm), hoặc để "Chưa có điểm" (đang học). Điểm chữ, hệ 4 và trạng thái do máy chủ tính; điểm trung bình học kỳ hệ 4 = Σ(điểm 4 × TC) / Σ TC.
   - Sửa kỳ/điểm hoặc xóa khai báo; khai báo lại học phần đã đạt được tính là học cải thiện.
   - **Gợi ý học phần nên học**, ưu tiên học phần bắt buộc bị trễ tiến độ; có kiểm tra học phần tiên quyết.
 - **Hồ sơ**: tự sửa thông tin liên hệ (SĐT, email, quê quán, ngày sinh).

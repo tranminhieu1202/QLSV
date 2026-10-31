@@ -66,6 +66,23 @@ void main() {
     expect(GradeScale.standing(1.99), 'Yếu');
   });
 
+  test('điểm TB học kỳ hệ 4 từ điểm học phần hệ 10, có trọng số tín chỉ', () {
+    // Kỳ 1 có 7 học phần; sinh viên chỉ nhập điểm học phần hệ 10.
+    final credits = [3, 3, 2, 2, 3, 4, 2];
+    final grades = [9.2, 8.6, 7.4, 6.8, 5.9, 8.1, 4.2];
+    final cs = [
+      for (var i = 0; i < 7; i++) _course(100 + i, credits: credits[i])
+    ];
+    final e = [for (var i = 0; i < 7; i++) _enr(cs[i], '20241', grades[i])];
+    expect([for (final x in e) x.gradeLetter],
+        ['A+', 'A', 'B', 'C+', 'C', 'B+', 'D']);
+    expect([for (final x in e) x.grade4], [4.0, 3.7, 3.0, 2.5, 2.0, 3.5, 1.0]);
+    final p = AcademicService.compute(_student, e, cs, term: '20261');
+    // (4.0×3 + 3.7×3 + 3.0×2 + 2.5×2 + 2.0×3 + 3.5×4 + 1.0×2) / 19 = 56.1 / 19
+    expect(p.terms.single.gpa, 2.95);
+    expect(p.terms.single.standing, 'Khá');
+  });
+
   test('năm đào tạo theo TC tích lũy & ngưỡng CPA (Điều 17, 44)', () {
     expect([for (final c in [0, 34, 35, 70, 71, 105, 106, 140, 141])
         AcademicService.trainingYearFor(c)],

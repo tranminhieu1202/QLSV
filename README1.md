@@ -321,13 +321,27 @@ Sinh viên **tự khai báo** mình học học phần nào, kỳ nào, được
 1. Bấm **Khai báo học phần**.
 2. **Học phần**: gõ mã hoặc tên để tìm trong chương trình đào tạo.
 3. **Học kỳ**: chọn HK1, HK2 hoặc học kỳ hè, từ năm nhập học tới năm học hiện tại.
-4. **Điểm**, chọn một trong ba cách:
-   - **Điểm học phần**: điểm tổng kết hệ 10, như trên bảng điểm.
-   - **Điểm thành phần**: điểm giữa kì (30%) và cuối kì (70%); ứng dụng tự tính điểm học phần.
+4. **Điểm**, chọn một trong hai cách:
+   - **Có điểm**: nhập **điểm học phần hệ 10**, tức điểm tổng kết cuối cùng của học phần như trên bảng điểm (ví dụ `8.6`). Không nhập điểm giữa kì hay cuối kì riêng.
    - **Chưa có điểm**: học phần được ghi là *Đang học*; nhập điểm sau khi có kết quả.
-5. Bấm **Khai báo** để lưu.
+5. Bấm **Lưu**.
 
-Điểm chữ, điểm hệ 4 và trạng thái (đạt / không đạt) do hệ thống tự tính.
+Từ điểm hệ 10, hệ thống tự quy ra **điểm chữ**, **điểm hệ 4** và trạng thái (đạt / không đạt). Ô xem trước trong hộp thoại hiện kết quả quy đổi ngay khi bạn gõ điểm.
+
+**Điểm trung bình học kỳ (hệ 4)** hiện ở đầu mỗi học kỳ, kèm xếp loại học lực. Cách tính: lấy điểm hệ 4 của từng học phần nhân với số tín chỉ, cộng lại, rồi chia cho tổng số tín chỉ của các học phần đã có điểm trong kỳ. Ví dụ học kỳ 1 có 7 học phần:
+
+| Học phần | TC | Điểm 10 | Điểm chữ | Điểm 4 | Điểm 4 × TC |
+|---|:-:|:-:|:-:|:-:|:-:|
+| HP 1 | 3 | 9,2 | A+ | 4,0 | 12,0 |
+| HP 2 | 3 | 8,6 | A | 3,7 | 11,1 |
+| HP 3 | 2 | 7,4 | B | 3,0 | 6,0 |
+| HP 4 | 2 | 6,8 | C+ | 2,5 | 5,0 |
+| HP 5 | 3 | 5,9 | C | 2,0 | 6,0 |
+| HP 6 | 4 | 8,1 | B+ | 3,5 | 14,0 |
+| HP 7 | 2 | 4,2 | D | 1,0 | 2,0 |
+| **Cộng** | **19** | | | | **56,1** |
+
+Điểm trung bình học kỳ = 56,1 / 19 = **2,95** (hệ 4), học lực **Khá**.
 
 **Sửa hoặc xóa:** ở dòng học phần, bấm **Sửa kỳ / điểm** hoặc **Xóa**.
 

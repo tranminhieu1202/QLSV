@@ -172,9 +172,9 @@ class _StudentProgressViewState extends State<StudentProgressView>
                 WidgetStateProperty.all(AppColors.tableHeader),
             columns: const [
               DataColumn(label: Text('Học kỳ')),
-              DataColumn(label: Text('GPA')),
+              DataColumn(label: Text('Điểm TB học kỳ (hệ 4)')),
               DataColumn(label: Text('Học lực')),
-              DataColumn(label: Text('CPA')),
+              DataColumn(label: Text('CPA (hệ 4)')),
               DataColumn(label: Text('TC đăng ký')),
               DataColumn(label: Text('TC đạt')),
               DataColumn(label: Text('TC nợ')),
@@ -243,10 +243,8 @@ class _StudentProgressViewState extends State<StudentProgressView>
               DataColumn(label: Text('TC')),
               DataColumn(label: Text('Loại')),
               DataColumn(label: Text('Kỳ')),
-              DataColumn(label: Text('Giữa kì')),
-              DataColumn(label: Text('Cuối kì / HP')),
               DataColumn(label: Text('Điểm 10')),
-              DataColumn(label: Text('Chữ')),
+              DataColumn(label: Text('Điểm chữ')),
               DataColumn(label: Text('Điểm 4')),
               DataColumn(label: Text('Trạng thái')),
             ],
@@ -259,10 +257,7 @@ class _StudentProgressViewState extends State<StudentProgressView>
                   DataCell(Text('${e.course?.credits ?? 0}')),
                   DataCell(Text(e.course?.typeLabel ?? '')),
                   DataCell(Text(e.term)),
-                  DataCell(_componentCell(e, midterm: true)),
-                  DataCell(_componentCell(e, midterm: false)),
-                  DataCell(Text(e.grade10?.toStringAsFixed(1) ?? '-',
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
+                  DataCell(_gradeCell(e)),
                   DataCell(Text(e.gradeLetter ?? '-')),
                   DataCell(Text(e.grade4?.toStringAsFixed(1) ?? '-')),
                   DataCell(EnrollStatusChip(e.status)),
@@ -274,16 +269,17 @@ class _StudentProgressViewState extends State<StudentProgressView>
     );
   }
 
-  Widget _componentCell(Enrollment e, {required bool midterm}) {
-    final value = midterm ? e.midterm : e.finalExam;
-    final text = value?.toStringAsFixed(1) ?? '-';
-    if (!widget.canEditGrades) return Text(text);
+  /// Điểm học phần hệ 10; sinh viên bấm vào để sửa.
+  Widget _gradeCell(Enrollment e) {
+    final grade = Text(e.grade10?.toStringAsFixed(1) ?? '-',
+        style: const TextStyle(fontWeight: FontWeight.w600));
+    if (!widget.canEditGrades) return grade;
     return InkWell(
       onTap: () => _editGradesDialog(e),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(text),
+          grade,
           const SizedBox(width: 4),
           const Icon(Icons.edit, size: 14, color: AppColors.textMuted),
         ],

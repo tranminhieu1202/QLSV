@@ -195,6 +195,8 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
       ]));
 
   Widget _termCard(String term, List<Enrollment> list) {
+    // Điểm TB học kỳ hệ 4 = Σ(hệ 4 × TC) / Σ TC của các học phần đã có điểm,
+    // tính cả học phần không đạt (Điều 42 khoản 3).
     var credits = 0, graded = 0;
     double quality = 0;
     for (final e in list) {
@@ -221,7 +223,7 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                 const SizedBox(width: 12),
                 Text(
                     '${list.length} học phần · $credits TC'
-                    '${gpa == null ? '' : ' · GPA ${gpa.toStringAsFixed(2)} (${GradeScale.standing(gpa)})'}',
+                    '${gpa == null ? '' : ' · Điểm TB học kỳ (hệ 4): ${gpa.toStringAsFixed(2)} (${GradeScale.standing(gpa)})'}',
                     style: const TextStyle(color: AppColors.textMuted)),
                 const Spacer(),
                 TextButton.icon(
@@ -249,11 +251,9 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                   DataColumn(label: Text('Mã HP')),
                   DataColumn(label: Text('Tên học phần')),
                   DataColumn(label: Text('TC'), numeric: true),
-                  DataColumn(label: Text('Giữa kì'), numeric: true),
-                  DataColumn(label: Text('Cuối kì / HP'), numeric: true),
                   DataColumn(label: Text('Điểm 10'), numeric: true),
-                  DataColumn(label: Text('Chữ')),
-                  DataColumn(label: Text('Hệ 4'), numeric: true),
+                  DataColumn(label: Text('Điểm chữ')),
+                  DataColumn(label: Text('Điểm 4'), numeric: true),
                   DataColumn(label: Text('Trạng thái')),
                   DataColumn(label: Text('')),
                 ],
@@ -264,8 +264,6 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                       DataCell(SizedBox(
                           width: 260, child: Text(e.course?.name ?? ''))),
                       DataCell(Text('${e.course?.credits ?? 0}')),
-                      DataCell(Text(e.midterm?.toStringAsFixed(1) ?? '-')),
-                      DataCell(Text(e.finalExam?.toStringAsFixed(1) ?? '-')),
                       DataCell(Text(e.grade10?.toStringAsFixed(1) ?? '-',
                           style:
                               const TextStyle(fontWeight: FontWeight.w600))),

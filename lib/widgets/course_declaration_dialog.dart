@@ -8,7 +8,7 @@ import '../models/student.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 
-enum _GradeMode { overall, components, none }
+enum _GradeMode { graded, none }
 
 /// Sinh viên tự khai báo (hoặc sửa) một học phần: học ở kỳ nào và được bao
 /// nhiêu điểm. Không cần duyệt – lưu là có hiệu lực, cán bộ theo dõi ngay.
@@ -42,13 +42,11 @@ class CourseDeclarationDialog extends StatefulWidget {
 
 class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   final _courseCtrl = TextEditingController();
-  final _overallCtrl = TextEditingController();
-  final _midCtrl = TextEditingController();
-  final _finalCtrl = TextEditingController();
+  final _gradeCtrl = TextEditingController();
   Course? _course;
   late String _term;
   late List<String> _terms;
-  _GradeMode _mode = _GradeMode.overall;
+  _GradeMode _mode = _GradeMode.graded;
   bool _saving = false;
   String? _error;
 
@@ -62,12 +60,9 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
     _terms = AcademicService.termOptions(widget.student, state.currentTerm,
         existing: [_term, for (final x in widget.enrollments) x.term]);
     if (e != null) {
-      if (e.midterm != null) {
-        _mode = _GradeMode.components;
-        _midCtrl.text = e.midterm!.toStringAsFixed(1);
-        _finalCtrl.text = e.finalExam?.toStringAsFixed(1) ?? '';
-      } else if (e.finalExam != null) {
-        _overallCtrl.text = e.finalExam!.toStringAsFixed(1);
+      // Bản ghi cũ nhập theo điểm thành phần vẫn có grade10 đã tính sẵn.
+      if (e.grade10 != null) {
+        _gradeCtrl.text = e.grade10!.toStringAsFixed(1);
       } else {
         _mode = _GradeMode.none;
       }
@@ -77,9 +72,7 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   @override
   void dispose() {
     _courseCtrl.dispose();
-    _overallCtrl.dispose();
-    _midCtrl.dispose();
-    _finalCtrl.dispose();
+    _gradeCtrl.dispose();
     super.dispose();
   }
 
@@ -92,15 +85,9 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   bool _invalid(TextEditingController c) =>
       c.text.trim().isNotEmpty && _parse(c.text) == null;
 
-  /// (giữa kì, cuối kì) gửi lên máy chủ theo cách nhập đang chọn.
-  (double?, double?) get _grades => switch (_mode) {
-        _GradeMode.overall => (null, _parse(_overallCtrl.text)),
-        _GradeMode.components => (
-            _parse(_midCtrl.text),
-            _parse(_finalCtrl.text)
-          ),
-        _GradeMode.none => (null, null),
-      };
+  /// Điểm học phần hệ 10 gửi lên máy chủ; null khi chưa có điểm.
+  double? get _grade10 =>
+      _mode == _GradeMode.graded ? _parse(_gradeCtrl.text) : null;
 
   String? get _note {
     final c = _course;
@@ -126,11 +113,18 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       setState(() => _error = 'Chọn học phần.');
       return;
     }
-    if (_invalid(_overallCtrl) || _invalid(_midCtrl) || _invalid(_finalCtrl)) {
-      setState(() => _error = 'Điểm phải nằm trong khoảng 0 - 10.');
-      return;
+    if (_mode == _GradeMode.graded) {
+      if (_gradeCtrl.text.trim().isEmpty) {
+        setState(() => _error =
+            'Nhập điểm học phần, hoặc chọn "Chưa có điểm" nếu đang học.');
+        return;
+      }
+      if (_invalid(_gradeCtrl)) {
+        setState(() => _error = 'Điểm phải nằm trong khoảng 0 - 10.');
+        return;
+      }
     }
-    final (mid, fin) = _grades;
+    final grade10 = _grade10;
     setState(() {
       _saving = true;
       _error = null;
@@ -142,14 +136,12 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
             student: widget.student,
             course: _course!,
             term: _term,
-            midterm: mid,
-            finalExam: fin,
+            grade10: grade10,
             actor: state.user!)
         : await state.repo.updateDeclaration(
             e: e,
             term: _term,
-            midterm: mid,
-            finalExam: fin,
+            grade10: grade10,
             actor: state.user!,
             studentCode: widget.student.studentCode);
     if (!mounted) return;
@@ -197,10 +189,7 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
               SegmentedButton<_GradeMode>(
                 segments: const [
                   ButtonSegment(
-                      value: _GradeMode.overall, label: Text('Điểm học phần')),
-                  ButtonSegment(
-                      value: _GradeMode.components,
-                      label: Text('Điểm thành phần')),
+                      value: _GradeMode.graded, label: Text('Có điểm')),
                   ButtonSegment(
                       value: _GradeMode.none, label: Text('Chưa có điểm')),
                 ],
@@ -267,25 +256,21 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   }
 
   List<Widget> _gradeFields() {
-    Widget field(TextEditingController c, String label, {bool focus = false}) =>
-        TextField(
-          controller: c,
-          autofocus: focus,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-              labelText: label, errorText: _invalid(c) ? '0 - 10' : null),
-          onChanged: (_) => setState(() {}),
-        );
     switch (_mode) {
-      case _GradeMode.overall:
-        return [field(_overallCtrl, 'Điểm học phần (hệ 10)', focus: true)];
-      case _GradeMode.components:
+      case _GradeMode.graded:
         return [
-          Row(children: [
-            Expanded(child: field(_midCtrl, 'Điểm giữa kì / bộ phận')),
-            const SizedBox(width: 12),
-            Expanded(child: field(_finalCtrl, 'Điểm cuối kì')),
-          ]),
+          TextField(
+            controller: _gradeCtrl,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Điểm học phần (hệ 10)',
+              helperText:
+                  'Điểm tổng kết cuối cùng của học phần, như trên bảng điểm',
+              errorText: _invalid(_gradeCtrl) ? '0 - 10' : null,
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
         ];
       case _GradeMode.none:
         return const [
@@ -296,21 +281,17 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   }
 
   Widget _preview() {
-    final (mid, fin) = _grades;
+    final g = _grade10;
     final String text;
     if (_mode == _GradeMode.none) {
       text = 'Trạng thái: Đang học';
-    } else if (fin == null) {
-      text = _mode == _GradeMode.components
-          ? 'Chưa có điểm học phần (cần điểm cuối kì). Trọng số: bộ phận '
-              '${(GradeScale.midtermWeight * 100).round()}% · cuối kì '
-              '${((1 - GradeScale.midtermWeight) * 100).round()}%'
-          : 'Nhập điểm học phần hệ 10 như trên bảng điểm.';
+    } else if (g == null) {
+      text = 'Nhập điểm học phần hệ 10 (0 - 10).';
     } else {
-      final g = GradeScale.overall(mid, fin);
-      text = 'Điểm học phần ${g.toStringAsFixed(1)} → '
-          '${GradeScale.letter(g)} · hệ 4: ${GradeScale.toFour(g).toStringAsFixed(1)} · '
-          '${GradeScale.isPass(g) ? 'Đạt' : 'Không đạt'}';
+      final g1 = double.parse(g.toStringAsFixed(1));
+      text = 'Điểm ${g1.toStringAsFixed(1)} → điểm chữ ${GradeScale.letter(g1)}'
+          ' · hệ 4: ${GradeScale.toFour(g1).toStringAsFixed(1)} · '
+          '${GradeScale.isPass(g1) ? 'Đạt' : 'Không đạt'}';
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -746,34 +746,18 @@ class Repository {
     return list;
   }
 
-  /// Nhập điểm thành phần. Điểm tổng kết / chữ / hệ 4 / trạng thái được TÍNH
-  /// TẠI SERVER (trigger), client chỉ gửi điểm giữa kì & cuối kì.
-  Future<void> upsertGrade({
-    required int enrollmentId,
-    double? midterm,
-    double? finalExam,
-    required AppUser actor,
-    String? studentCode,
-    String? courseCode,
-  }) async {
-    await _sb.from('enrollments').update({
-      'midterm': _grade(midterm),
-      'final_exam': _grade(finalExam),
-    }).eq('id', enrollmentId);
-    await addAudit(actor, 'Nhập điểm',
-        'Nhập điểm ${courseCode ?? ''}${_gradeText(midterm, finalExam)}',
-        studentCode: studentCode);
-  }
-
   // ------------------------------------------------- tự khai báo học tập
+  // Sinh viên chỉ nhập điểm học phần hệ 10 [grade10] (null = đang học). Máy
+  // chủ (trigger apply_grade) lưu nó vào grade10 và tính điểm chữ, hệ 4, trạng
+  // thái. Cột midterm luôn để trống: không còn nhập điểm thành phần.
+
   /// Sinh viên tự khai báo đã/đang học [course] ở [term], kèm điểm nếu có.
   /// Không cần duyệt; điểm chữ, hệ 4 và trạng thái do máy chủ tính.
   Future<String?> declareCourse({
     required Student student,
     required Course course,
     required String term,
-    double? midterm,
-    double? finalExam,
+    double? grade10,
     required AppUser actor,
   }) async {
     try {
@@ -783,8 +767,8 @@ class Repository {
         'term': term,
         'status': 'studying',
         'approval': 'approved',
-        'midterm': _grade(midterm),
-        'final_exam': _grade(finalExam),
+        'midterm': null,
+        'final_exam': _grade(grade10),
       });
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
@@ -793,7 +777,7 @@ class Repository {
       return 'Không lưu được: ${e.message}';
     }
     await addAudit(actor, 'Khai báo học phần',
-        '${course.code} · ${course.name} (kỳ $term)${_gradeText(midterm, finalExam)}',
+        '${course.code} · ${course.name} (kỳ $term)${_gradeText(grade10)}',
         studentCode: student.studentCode);
     return null;
   }
@@ -802,16 +786,15 @@ class Repository {
   Future<String?> updateDeclaration({
     required Enrollment e,
     required String term,
-    double? midterm,
-    double? finalExam,
+    double? grade10,
     required AppUser actor,
     String? studentCode,
   }) async {
     try {
       await _sb.from('enrollments').update({
         'term': term,
-        'midterm': _grade(midterm),
-        'final_exam': _grade(finalExam),
+        'midterm': null,
+        'final_exam': _grade(grade10),
       }).eq('id', e.id);
     } on PostgrestException catch (err) {
       if (err.code == '23505') {
@@ -820,7 +803,7 @@ class Repository {
       return 'Không lưu được: ${err.message}';
     }
     await addAudit(actor, 'Sửa khai báo học phần',
-        '${e.course?.code ?? ''} (kỳ $term)${_gradeText(midterm, finalExam)}',
+        '${e.course?.code ?? ''} (kỳ $term)${_gradeText(grade10)}',
         studentCode: studentCode);
     return null;
   }
@@ -836,14 +819,10 @@ class Repository {
   static double? _grade(double? v) =>
       v == null ? null : double.parse(v.toStringAsFixed(1));
 
-  static String _gradeText(double? midterm, double? finalExam) {
-    if (finalExam == null) {
-      return midterm == null
-          ? ''
-          : ' · GK ${midterm.toStringAsFixed(1)} (chờ điểm cuối kì)';
-    }
-    final overall = GradeScale.overall(midterm, finalExam);
-    return ' · điểm ${overall.toStringAsFixed(1)} (${GradeScale.letter(overall)})';
+  static String _gradeText(double? grade10) {
+    if (grade10 == null) return '';
+    final g = _grade(grade10)!;
+    return ' · điểm ${g.toStringAsFixed(1)} (${GradeScale.letter(g)})';
   }
 
   // -------------------------------------------------------------- audit

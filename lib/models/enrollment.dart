@@ -48,9 +48,7 @@ class Enrollment {
   final int studentId;
   final int courseId;
   final String term; // e.g. 20231 (year 2023, semester 1)
-  final double? midterm; // điểm giữa kì (hệ 10)
-  final double? finalExam; // điểm cuối kì (hệ 10)
-  final double? grade10; // điểm tổng kết hệ 10
+  final double? grade10; // điểm học phần hệ 10 do sinh viên nhập
   final String? gradeLetter; // A, B+, ...
   final double? grade4; // điểm hệ 4
   final EnrollStatus status;
@@ -64,8 +62,6 @@ class Enrollment {
     required this.studentId,
     required this.courseId,
     required this.term,
-    this.midterm,
-    this.finalExam,
     this.grade10,
     this.gradeLetter,
     this.grade4,
@@ -80,8 +76,6 @@ class Enrollment {
         studentId: (m['student_id'] as num).toInt(),
         courseId: (m['course_id'] as num).toInt(),
         term: m['term'] as String,
-        midterm: (m['midterm'] as num?)?.toDouble(),
-        finalExam: (m['final_exam'] as num?)?.toDouble(),
         grade10: (m['grade10'] as num?)?.toDouble(),
         gradeLetter: m['grade_letter'] as String?,
         grade4: (m['grade4'] as num?)?.toDouble(),
@@ -93,21 +87,11 @@ class Enrollment {
 
 /// Quy đổi điểm theo Quy chế đào tạo đại học tại ĐHQGHN
 /// (QĐ 3626/QĐ-ĐHQGHN ngày 21/10/2022, Điều 41 & 43).
+///
+/// Sinh viên chỉ nhập điểm học phần hệ 10 (điểm tổng kết cuối cùng trên bảng
+/// điểm); điểm chữ và hệ 4 suy ra từ đó, GPA học kỳ là trung bình hệ 4 có
+/// trọng số tín chỉ.
 class GradeScale {
-  /// Tỉ trọng điểm giữa kì khi sinh viên nhập điểm thành phần (còn lại là
-  /// điểm cuối kì). Trọng số thực tế theo đề cương từng học phần; điểm kết thúc
-  /// học phần không dưới 60%.
-  static const midtermWeight = 0.3;
-
-  /// Điểm học phần hệ 10 từ điểm giữa kì (có thể trống) và điểm cuối kì. Khi
-  /// không có điểm giữa kì thì [finalExam] chính là điểm học phần.
-  static double overall(double? midterm, double finalExam) {
-    final o = midterm == null
-        ? finalExam
-        : midterm * midtermWeight + finalExam * (1 - midtermWeight);
-    return double.parse(o.toStringAsFixed(1));
-  }
-
   static String letter(double g10) {
     if (g10 >= 9.0) return 'A+';
     if (g10 >= 8.5) return 'A';
