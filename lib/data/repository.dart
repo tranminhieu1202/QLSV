@@ -95,6 +95,23 @@ class AccountLockedException implements Exception {
   const AccountLockedException();
 }
 
+/// Supabase Auth tạm chặn vì quá nhiều lần đăng nhập (HTTP 429) – thường do
+/// cả lớp đăng nhập cùng lúc qua chung một địa chỉ IP (Wi-Fi trường).
+class LoginRateLimitedException implements Exception {
+  const LoginRateLimitedException();
+}
+
+/// Đúng mật khẩu nhưng tài khoản chưa có hồ sơ (profiles) trên hệ thống.
+class MissingProfileException implements Exception {
+  const MissingProfileException();
+}
+
+/// Lỗi phía máy chủ xác thực, không phải do sai tên đăng nhập / mật khẩu.
+class LoginServerException implements Exception {
+  const LoginServerException(this.message);
+  final String message;
+}
+
 /// Read/write access to the Supabase (PostgreSQL) backend. RLS enforces which
 /// rows each role may touch; this layer only shapes the queries.
 class Repository {
@@ -137,16 +154,25 @@ class Repository {
       if (uid == null) return null;
       final row =
           await _sb.from('profiles').select().eq('id', uid).maybeSingle();
-      if (row == null) return null;
+      if (row == null) {
+        await _sb.auth.signOut();
+        throw const MissingProfileException();
+      }
       final user = AppUser.fromMap(Map<String, Object?>.from(row));
       if (!user.active) {
         await _sb.auth.signOut();
         throw const AccountLockedException();
       }
       return user;
-    } on AuthApiException {
-      // API trả lỗi xác thực => sai email/mật khẩu.
-      return null;
+    } on AuthApiException catch (e) {
+      if (e.statusCode == '429' || e.code == 'over_request_rate_limit') {
+        throw const LoginRateLimitedException();
+      }
+      // 400 / invalid_credentials => sai email/mật khẩu.
+      if (e.statusCode == '400' || e.code == 'invalid_credentials') {
+        return null;
+      }
+      throw LoginServerException(e.message);
     }
     // Lỗi mạng / project Supabase tạm dừng sẽ ném tiếp để báo "không kết nối".
   }
