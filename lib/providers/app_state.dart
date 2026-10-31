@@ -119,10 +119,19 @@ class AppState extends ChangeNotifier {
       await refreshSettings();
       return true;
     } catch (e) {
-      _loginError = e is AccountLockedException
-          ? 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị.'
-          : 'Không kết nối được máy chủ. Kiểm tra mạng hoặc trạng thái '
-                'project Supabase (có thể đang tạm dừng).';
+      _loginError = switch (e) {
+        AccountLockedException() =>
+          'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị.',
+        LoginRateLimitedException() =>
+          'Đăng nhập quá nhiều lần trong thời gian ngắn (có thể do nhiều '
+              'người dùng chung mạng). Vui lòng thử lại sau vài phút.',
+        MissingProfileException() =>
+          'Tài khoản chưa có hồ sơ trên hệ thống. Vui lòng liên hệ quản trị.',
+        LoginServerException(:final message) =>
+          'Máy chủ đăng nhập báo lỗi: $message',
+        _ => 'Không kết nối được máy chủ. Kiểm tra mạng hoặc trạng thái '
+            'project Supabase (có thể đang tạm dừng).',
+      };
       return false;
     } finally {
       _busy = false;
