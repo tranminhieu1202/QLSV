@@ -12,7 +12,10 @@ enum _GradeMode { graded, none }
 
 /// Sinh viên tự khai báo (hoặc sửa) một học phần: học ở kỳ nào và được bao
 /// nhiêu điểm. Không cần duyệt – lưu là có hiệu lực, cán bộ theo dõi ngay.
-/// Trả về `true` khi đã lưu.
+///
+/// Khi khai báo mới, hộp thoại không đóng sau mỗi lần lưu: giữ nguyên học kỳ
+/// đang chọn để sinh viên nhập liền nhiều học phần, rồi tự bấm "Xong".
+/// Trả về `true` khi đã lưu ít nhất một học phần.
 class CourseDeclarationDialog extends StatefulWidget {
   const CourseDeclarationDialog({
     super.key,
@@ -50,13 +53,23 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   bool _saving = false;
   String? _error;
 
+  /// Học phần đã lưu trong lượt này (khai báo mới), mới nhất ở đầu.
+  final List<({Course course, String term, double? grade10})> _saved = [];
+  final _courseFocus = FocusNode();
+
+  /// Học kỳ khai báo gần nhất, để lần mở sau chọn sẵn kỳ đó.
+  static final Map<int, String> _lastTerm = {};
+
   @override
   void initState() {
     super.initState();
     final e = widget.editing;
     final state = context.read<AppState>();
     _course = e?.course ?? widget.initialCourse;
-    _term = e?.term ?? widget.initialTerm ?? state.currentTerm;
+    _term = e?.term ??
+        widget.initialTerm ??
+        _lastTerm[widget.student.id] ??
+        state.currentTerm;
     _terms = AcademicService.termOptions(widget.student, state.currentTerm,
         existing: [_term, for (final x in widget.enrollments) x.term]);
     if (e != null) {
@@ -73,6 +86,7 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
   void dispose() {
     _courseCtrl.dispose();
     _gradeCtrl.dispose();
+    _courseFocus.dispose();
     super.dispose();
   }
 
@@ -94,7 +108,8 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
     if (c == null) return null;
     final others =
         widget.enrollments.where((x) => x.courseId == c.id && x.id != widget.editing?.id);
-    if (others.any((x) => x.term == _term)) {
+    if (others.any((x) => x.term == _term) ||
+        _saved.any((x) => x.course.id == c.id && x.term == _term)) {
       return 'Học phần này đã được khai báo ở kỳ $_term.';
     }
     final passed = others.where((x) => x.status == EnrollStatus.passed);
@@ -153,8 +168,26 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       return;
     }
     await state.bumpData();
-    if (mounted) Navigator.pop(context, true);
+    if (!mounted) return;
+    if (e != null) {
+      Navigator.pop(context, true);
+      return;
+    }
+    // Khai báo mới: giữ hộp thoại và học kỳ, xóa học phần + điểm để nhập tiếp.
+    _lastTerm[widget.student.id] = _term;
+    setState(() {
+      _saved.insert(0, (course: _course!, term: _term, grade10: grade10));
+      _course = null;
+      _courseCtrl.clear();
+      _gradeCtrl.clear();
+      _saving = false;
+    });
+    // Ô học phần được dựng lại ở frame sau; đợi rồi mới đưa con trỏ vào.
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _courseFocus.requestFocus());
   }
+
+  void _close() => Navigator.pop(context, _saved.isNotEmpty);
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +206,10 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
                     style: const TextStyle(fontWeight: FontWeight.w600))
               else
                 _coursePicker(),
+              if (_saved.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _savedList(),
+              ],
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _term,
@@ -218,11 +255,19 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: _saving ? null : () => Navigator.pop(context, false),
-            child: const Text('Hủy')),
+            onPressed: _saving ? null : _close,
+            child: Text(editing
+                ? 'Hủy'
+                : _saved.isEmpty
+                    ? 'Đóng'
+                    : 'Xong (đã lưu ${_saved.length})')),
         ElevatedButton(
           onPressed: _saving ? null : _save,
-          child: Text(_saving ? 'Đang lưu...' : 'Lưu'),
+          child: Text(_saving
+              ? 'Đang lưu...'
+              : editing
+                  ? 'Lưu'
+                  : 'Lưu & nhập tiếp'),
         ),
       ],
     );
@@ -235,7 +280,9 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
         return s != 0 ? s : a.code.compareTo(b.code);
       });
     return DropdownMenu<Course>(
+      key: ValueKey(_saved.length),
       controller: _courseCtrl,
+      focusNode: _courseFocus,
       initialSelection: _course,
       enableFilter: true,
       requestFocusOnTap: true,
@@ -270,6 +317,8 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
               errorText: _invalid(_gradeCtrl) ? '0 - 10' : null,
             ),
             onChanged: (_) => setState(() {}),
+            // Enter để lưu nhanh rồi nhập học phần tiếp theo.
+            onSubmitted: (_) => _saving ? null : _save(),
           ),
         ];
       case _GradeMode.none:
@@ -278,6 +327,36 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
               style: TextStyle(color: AppColors.textMuted)),
         ];
     }
+  }
+
+  Widget _savedList() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.ok.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Đã lưu ${_saved.length} học phần – chọn học phần tiếp theo, '
+              'hoặc bấm "Xong" khi nhập hết.',
+              style: const TextStyle(
+                  color: AppColors.ok, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          for (final x in _saved.take(5))
+            Text(
+                '✓ ${x.course.code} · ${x.course.name} – kỳ ${x.term}: '
+                '${x.grade10 == null ? 'Đang học' : x.grade10!.toStringAsFixed(1)}',
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis),
+          if (_saved.length > 5)
+            Text('… và ${_saved.length - 5} học phần khác',
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textMuted)),
+        ],
+      ),
+    );
   }
 
   Widget _preview() {

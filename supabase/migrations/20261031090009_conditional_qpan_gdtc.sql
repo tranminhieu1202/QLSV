@@ -9,10 +9,8 @@
 -- mà quản trị quên bật "Điều kiện".
 -- ============================================================================
 
+-- Đã thu hẹp: chỉ PES1001 và DEF1001 (xem 20261031090011).
 update public.courses
 set conditional = true
 where conditional = false
-  and (code ilike 'DEF%'
-       or code ilike 'PES%'
-       or name ilike '%quốc phòng%'
-       or name ilike '%thể chất%');
+  and upper(code) in ('PES1001', 'DEF1001');

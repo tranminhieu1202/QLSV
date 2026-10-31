@@ -10,6 +10,7 @@ import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/course_declaration_dialog.dart';
+import '../../widgets/term_grade_entry_dialog.dart';
 import '../../widgets/revision_reload.dart';
 
 /// Sinh viên tự khai báo kỳ nào học học phần nào và được bao nhiêu điểm.
@@ -68,6 +69,19 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
     );
   }
 
+  Future<void> _enterTerm([String? term]) async {
+    await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => TermGradeEntryDialog(
+        student: _student!,
+        courses: _courses,
+        enrollments: _enrollments,
+        initialTerm: term,
+      ),
+    );
+  }
+
   Future<void> _delete(Enrollment e) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -119,8 +133,8 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
             child: Padding(
               padding: EdgeInsets.all(24),
               child: Center(
-                child: Text('Bạn chưa khai báo học phần nào. Bấm "Khai báo '
-                    'học phần" để thêm các học phần đã và đang học.'),
+                child: Text('Bạn chưa khai báo học phần nào. Bấm "Nhập điểm '
+                    'cả kỳ" để nhập điểm các học phần của từng học kỳ.'),
               ),
             ),
           ),
@@ -175,10 +189,22 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
               ),
             ),
             const SizedBox(width: 12),
-            ElevatedButton.icon(
-              onPressed: () => _declare(),
-              icon: const Icon(Icons.add),
-              label: const Text('Khai báo học phần'),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _enterTerm(),
+                  icon: const Icon(Icons.table_rows_outlined),
+                  label: const Text('Nhập điểm cả kỳ'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _declare(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Khai báo từng học phần'),
+                ),
+              ],
             ),
           ],
         ),
@@ -229,17 +255,9 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                     style: const TextStyle(color: AppColors.textMuted)),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: () => showDialog<bool>(
-                    context: context,
-                    builder: (_) => CourseDeclarationDialog(
-                      student: _student!,
-                      courses: _courses,
-                      enrollments: _enrollments,
-                      initialTerm: term,
-                    ),
-                  ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Thêm vào kỳ này'),
+                  onPressed: () => _enterTerm(term),
+                  icon: const Icon(Icons.table_rows_outlined, size: 18),
+                  label: const Text('Nhập / sửa điểm kỳ này'),
                 ),
               ],
             ),

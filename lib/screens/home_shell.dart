@@ -14,6 +14,7 @@ import 'activity_screen.dart';
 import 'faculty/accounts_screen.dart';
 import 'faculty/curriculum_screen.dart';
 import 'faculty/dashboard_screen.dart';
+import 'faculty/graduation_screen.dart';
 import 'faculty/registration_screen.dart';
 import 'faculty/reports_screen.dart';
 import 'faculty/students_screen.dart';
@@ -49,6 +50,8 @@ class _HomeShellState extends State<HomeShell> {
             Icons.groups_outlined, Icons.groups, 'Sinh viên', StudentsScreen()),
         const _NavItem(Icons.warning_amber_outlined, Icons.warning_amber,
             'Cảnh báo', WarningsScreen()),
+        const _NavItem(Icons.school_outlined, Icons.school, 'Xét tốt nghiệp',
+            GraduationScreen()),
         const _NavItem(Icons.summarize_outlined, Icons.summarize,
             'Báo cáo & xuất file', ReportsScreen()),
         const _NavItem(Icons.menu_book_outlined, Icons.menu_book, 'CT đào tạo',

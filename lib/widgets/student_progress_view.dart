@@ -10,6 +10,7 @@ import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import 'common.dart';
 import 'course_declaration_dialog.dart';
+import 'graduation_view.dart';
 
 /// Full academic profile of one student. Shared by faculty (student detail)
 /// and by the student's own portal.
@@ -29,7 +30,7 @@ class StudentProgressView extends StatefulWidget {
 
 class _StudentProgressViewState extends State<StudentProgressView>
     with SingleTickerProviderStateMixin {
-  late final TabController _tab = TabController(length: 4, vsync: this);
+  late final TabController _tab = TabController(length: 5, vsync: this);
   List<Enrollment> _enrollments = [];
   List<Course> _courses = [];
   StudentProgress? _progress;
@@ -93,6 +94,7 @@ class _StudentProgressViewState extends State<StudentProgressView>
               Tab(text: 'Điểm tổng hợp'),
               Tab(text: 'Điểm chi tiết'),
               Tab(text: 'Tiến trình đào tạo'),
+              Tab(text: 'Điều kiện tốt nghiệp'),
               Tab(text: 'Cảnh báo'),
             ],
           ),
@@ -105,6 +107,10 @@ class _StudentProgressViewState extends State<StudentProgressView>
               _termSummaryTab(p),
               _gradesTab(),
               _curriculumTab(),
+              GraduationView(
+                  progress: p,
+                  enrollments: _enrollments,
+                  courses: _courses),
               _warningsTab(p),
             ],
           ),

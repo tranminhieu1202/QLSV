@@ -8,13 +8,21 @@ import '../models/student.dart';
 import '../models/user.dart';
 import 'academic_service.dart';
 import 'curriculum_seed.dart';
+import 'graduation.dart';
 import 'supabase_config.dart';
 
 /// Pairs a student with their computed academic progress.
 class StudentWithProgress {
   final Student student;
   final StudentProgress progress;
-  StudentWithProgress(this.student, this.progress);
+  final List<Enrollment> enrollments;
+  final List<Course> courses;
+  StudentWithProgress(this.student, this.progress,
+      {this.enrollments = const [], this.courses = const []});
+
+  /// Xét điều kiện tốt nghiệp, tính khi cần lần đầu.
+  late final GraduationCheck graduation =
+      GraduationCheck.compute(progress, enrollments, courses);
 }
 
 class AuditEntry {
@@ -892,9 +900,12 @@ class Repository {
       }
     }
     return studs
-        .map((s) => StudentWithProgress(s,
+        .map((s) => StudentWithProgress(
+            s,
             AcademicService.compute(s, byStudent[s.id] ?? const [], courseList,
-                term: term)))
+                term: term),
+            enrollments: byStudent[s.id] ?? const [],
+            courses: courseList))
         .toList();
   }
 }

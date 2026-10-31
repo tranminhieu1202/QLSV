@@ -30,6 +30,8 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
   - Thêm sinh viên kèm tạo tài khoản đăng nhập; mã SV được gợi ý tự động theo quy ước của trường.
   - Xem hồ sơ chi tiết của từng SV gồm 4 tab: điểm tổng hợp, điểm chi tiết, tiến trình đào tạo theo khối kiến thức, cảnh báo.
   - Đặt lại mật khẩu, khóa tài khoản, xóa sinh viên.
+- **Xét tốt nghiệp**: danh sách theo khóa / lớp, ai đủ hay chưa đủ điều kiện tốt nghiệp và còn thiếu gì; lọc, tìm, xuất Excel/PDF.
+- **Điều kiện tốt nghiệp** (tab trong hồ sơ sinh viên, cả cán bộ và sinh viên đều xem được): TC đạt của từng khối kiến thức so với yêu cầu (bắt buộc, tự chọn x/y TC, hướng ngành), tổng 130 TC, CPA ≥ 2,00, học phần điều kiện.
 - **Cảnh báo**: danh sách SV có cảnh báo, lọc theo mức tối thiểu. Mỗi cảnh báo kèm chi tiết các học phần không đạt hoặc còn thiếu so với tiến trình.
 - **Báo cáo & xuất file**
   - **Mẫu báo cáo nhanh**: SV bị cảnh báo học vụ lần 1, lần 2 liên tiếp, thuộc diện buộc thôi học, SV năm 1–4, SV năm 2 và 3, đúng tiến độ, chậm tiến độ, đang nợ tín chỉ, CPA < 2.0, đủ tín chỉ xét tốt nghiệp.
@@ -64,7 +66,7 @@ Dữ liệu lưu tập trung trên **Supabase (PostgreSQL)**. Nhiều cán bộ 
   | Điểm chữ | A+ | A | B+ | B | C+ | C | D+ | D | F |
   | Hệ 4 | 4,0 | 3,7 | 3,5 | 3,0 | 2,5 | 2,0 | 1,5 | 1,0 | 0 |
 
-- **GPA học kỳ** tính mọi học phần trong kỳ, cả đạt và không đạt. **CPA (TB chung tích lũy)** chỉ tính học phần đã đạt; học cải thiện thì lần đạt gần nhất thay điểm cũ. Học phần điều kiện (GDTC, GDQP-AN…) chỉ xét Đạt/Không đạt, không có điểm chữ/hệ 4 và không tính vào GPA, CPA, tín chỉ tích lũy.
+- **GPA học kỳ** tính mọi học phần trong kỳ, cả đạt và không đạt. **CPA (TB chung tích lũy)** chỉ tính học phần đã đạt; học cải thiện thì lần đạt gần nhất thay điểm cũ. Học phần điều kiện (PES1001 Giáo dục thể chất, DEF1001 GDQP-AN, TMT2100 Kĩ năng bổ trợ) chỉ xét Đạt/Không đạt, không có điểm chữ/hệ 4 và không tính vào GPA, CPA, tín chỉ tích lũy.
 - **Kỳ hè** được gộp vào học kỳ chính ngay trước nó khi xử lý học vụ.
 - **Xếp loại học lực** theo GPA học kỳ: Xuất sắc ≥ 3,60 · Giỏi ≥ 3,20 · Khá ≥ 2,50 · Trung bình ≥ 2,00 · Yếu.
 - **Năm đào tạo** theo TC tích lũy: < 35 năm 1 · 35–70 năm 2 · 71–105 năm 3 · 106–140 năm 4.

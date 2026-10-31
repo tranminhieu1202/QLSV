@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qlgd_edu/data/academic_service.dart';
+import 'package:qlgd_edu/data/graduation.dart';
 import 'package:qlgd_edu/models/academic.dart';
 import 'package:qlgd_edu/models/course.dart';
 import 'package:qlgd_edu/models/enrollment.dart';
@@ -108,6 +109,48 @@ void main() {
     expect(e.last.letterText, '—');
     expect(e.last.fourText, '—');
     expect(e.first.letterText, 'B+');
+  });
+
+  test('điều kiện tốt nghiệp: khối tự chọn 3/9 TC, HP điều kiện phải đạt', () {
+    Course mk(int id, String block, int tc,
+            {bool mandatory = false, bool conditional = false}) =>
+        Course(
+          id: id,
+          code: 'X$id',
+          name: 'HP $id',
+          credits: tc,
+          mandatory: mandatory,
+          conditional: conditional,
+          plannedSemester: 1,
+          semesterText: '1',
+          block: block,
+          blockName: block,
+        );
+    final cs = [
+      mk(301, 'II.2', 3),
+      mk(302, 'II.2', 3),
+      mk(303, 'II.2', 3),
+      mk(304, 'I', 3, mandatory: true),
+      mk(305, 'I', 4, mandatory: true, conditional: true),
+    ];
+    final e = [
+      _enr(cs[0], '20241', 7.0),
+      _enr(cs[3], '20241', 3.0),
+      _enr(cs[4], '20241', 8.0),
+    ];
+    final p = AcademicService.compute(_student, e, cs, term: '20261');
+    final g = GraduationCheck.compute(p, e, cs);
+    final elective = g.blocks.firstWhere((b) => b.key == 'II.2');
+    expect(elective.required, 3);
+    expect(elective.offered, 9);
+    expect(elective.passed, 3);
+    expect(elective.done, isTrue);
+    expect(elective.requirementLabel, 'Tự chọn 3/9 TC');
+    final general = g.blocks.firstWhere((b) => b.key == 'I');
+    expect(general.required, 3); // HP điều kiện không tính vào khối
+    expect(general.done, isFalse);
+    expect(g.conditionalCourses.values.single, isTrue);
+    expect(g.eligible, isFalse);
   });
 
   test('năm đào tạo theo TC tích lũy & ngưỡng CPA (Điều 17, 44)', () {

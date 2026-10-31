@@ -243,6 +243,8 @@ enum ReportColumn {
   debt('TC nợ', 1.1, true),
   academicLevel('Cảnh báo HV', 1.6, true),
   progress('Tiến độ', 1.4, true),
+  graduation('Xét tốt nghiệp', 1.8, false),
+  graduationMissing('Còn thiếu để tốt nghiệp', 5, false),
   notes('Ghi chú', 4.4, true);
 
   const ReportColumn(this.label, this.weight, this.defaultOn);
@@ -297,6 +299,11 @@ enum ReportColumn {
         return ReportFilter.levelText(p.academicLevel);
       case ReportColumn.progress:
         return p.behindSchedule ? 'Chậm' : 'Đúng';
+      case ReportColumn.graduation:
+        return d.graduation.eligible ? 'Đủ điều kiện' : 'Chưa đủ';
+      case ReportColumn.graduationMissing:
+        final m = d.graduation.missingSummary;
+        return m.isEmpty ? null : m;
       case ReportColumn.notes:
         // Các cảnh báo khác ngoài cảnh báo học vụ chính thức (đã có cột riêng).
         final notes = [

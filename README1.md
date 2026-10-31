@@ -108,7 +108,7 @@ Mọi vai trò đều có màn hình **Hoạt động**: nhật ký các thao t�
 
 | Chức năng | Quản trị | BCN Khoa | Trợ lý QT | CVHT | Sinh viên |
 |---|:-:|:-:|:-:|:-:|:-:|
-| Tổng quan, Sinh viên, Cảnh báo | Toàn khoa | Toàn khoa | Toàn khoa | Lớp mình cố vấn | – |
+| Tổng quan, Sinh viên, Cảnh báo, Xét tốt nghiệp | Toàn khoa | Toàn khoa | Toàn khoa | Lớp mình cố vấn | – |
 | Xem hồ sơ chi tiết sinh viên | Toàn khoa | Toàn khoa | Toàn khoa | Lớp mình cố vấn | Của mình |
 | Báo cáo & xuất Excel/PDF | ✔ | ✔ | ✔ | Lớp mình cố vấn | – |
 | Thêm sinh viên (kèm tài khoản) | ✔ | – | ✔ | – | – |
@@ -127,7 +127,7 @@ Mọi vai trò đều có màn hình **Hoạt động**: nhật ký các thao t�
 
 ## 5. Hướng dẫn cho Quản trị
 
-**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · Báo cáo & xuất file · CT đào tạo · **Kỳ học & duyệt hồ sơ** · **Tài khoản** · Hoạt động
+**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · **Xét tốt nghiệp** · Báo cáo & xuất file · CT đào tạo · **Kỳ học & duyệt hồ sơ** · **Tài khoản** · Hoạt động
 
 ### 5.1. Tổng quan
 
@@ -160,13 +160,14 @@ Màn hình đầu tiên sau khi đăng nhập, tóm tắt tình hình đào tạ
 
 ### 5.3. Hồ sơ chi tiết sinh viên
 
-Bấm vào một sinh viên ở màn Sinh viên, Cảnh báo hoặc Tổng quan. Hồ sơ gồm 4 tab:
+Bấm vào một sinh viên ở màn Sinh viên, Cảnh báo hoặc Tổng quan. Hồ sơ gồm 5 tab:
 
 | Tab | Nội dung |
 |---|---|
 | **Điểm tổng hợp** | CPA, GPA từng kỳ, tín chỉ tích lũy, xếp loại |
 | **Điểm chi tiết** | Từng học phần sinh viên đã khai báo: kỳ học, điểm hệ 10, điểm chữ, hệ 4, trạng thái |
-| **Tiến trình đào tạo** | Tiến độ theo từng khối kiến thức, học phần còn thiếu |
+| **Tiến trình đào tạo** | Các học phần theo học kỳ dự kiến và trạng thái từng học phần |
+| **Điều kiện tốt nghiệp** | Đủ / chưa đủ điều kiện xét tốt nghiệp: tổng TC tích lũy (130), CPA ≥ 2,00, học phần điều kiện, và số TC đã đạt của **từng khối kiến thức** so với yêu cầu, ví dụ *Khối kiến thức chung 21 TC*, *tự chọn theo lĩnh vực 3/9 TC* (học đủ 3 trong 9 TC được mở), *hướng ngành 12/24 TC*. Bấm vào từng khối để xem học phần đã đạt / đang học / chưa học |
 | **Cảnh báo** | Các cảnh báo hiện có và lý do |
 
 Thao tác của Quản trị trên hồ sơ:
@@ -180,6 +181,15 @@ Thao tác của Quản trị trên hồ sơ:
 - Danh sách sinh viên có cảnh báo, kèm chi tiết học phần không đạt hoặc còn thiếu so với tiến trình.
 - **Mức tối thiểu**: chọn mức thấp nhất cần hiển thị (*Lưu ý*, *Cảnh báo lần 1*, *Cảnh báo lần 2*, *Buộc thôi học*).
 - Bấm **Xem hồ sơ** để mở hồ sơ sinh viên; bấm **Xuất** để xuất danh sách.
+
+### 5.4a. Xét tốt nghiệp
+
+- Danh sách sinh viên theo **Khóa** và **Lớp**, mỗi sinh viên ghi **Đủ điều kiện** hoặc **Chưa đủ**, kèm TC tích lũy / 130, CPA và **còn thiếu gì**, ví dụ *II.2 (3 TC); V.3 hướng ngành (12 TC); HP điều kiện: DEF1001*.
+- Điều kiện xét: tích lũy đủ 130 TC, đủ TC **từng khối kiến thức** (bắt buộc, tự chọn x/y TC, một hướng ngành 12 TC, khóa luận hoặc HP thay thế), CPA từ 2,00, đạt các học phần điều kiện (GDTC, GDQP-AN, kĩ năng bổ trợ).
+- Lọc **Tất cả / Đủ điều kiện / Chưa đủ**, tìm theo MSSV hoặc họ tên; mặc định mở khóa cũ nhất.
+- Bấm một sinh viên để mở hồ sơ, tab **Điều kiện tốt nghiệp** cho chi tiết từng khối và từng học phần.
+- Bấm **Xuất** để xuất danh sách đang lọc ra Excel / PDF.
+- Chuẩn đầu ra ngoại ngữ và tình trạng kỷ luật không có trong ứng dụng, phòng Đào tạo tự kiểm tra khi làm hồ sơ.
 
 ### 5.5. Báo cáo & xuất file
 
@@ -236,12 +246,12 @@ Sau khi tạo tài khoản CVHT, phân công cố vấn cho sinh viên ở bư�
 
 ## 6. Hướng dẫn cho Ban chủ nhiệm khoa
 
-**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · Báo cáo & xuất file · CT đào tạo · Hoạt động
+**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · **Xét tốt nghiệp** · Báo cáo & xuất file · CT đào tạo · Hoạt động
 
 Ban chủ nhiệm khoa **xem được toàn bộ dữ liệu của khoa** nhưng **không sửa** dữ liệu.
 
 - **Theo dõi tình hình chung**: màn **Tổng quan** (mục 5.1). Lọc theo khóa để so sánh giữa các khóa.
-- **Xem sinh viên**: màn **Sinh viên** (mục 5.2), bấm vào một sinh viên để xem hồ sơ 4 tab (mục 5.3). Không có các nút sửa, đặt lại mật khẩu, khóa hay xóa.
+- **Xem sinh viên**: màn **Sinh viên** (mục 5.2), bấm vào một sinh viên để xem hồ sơ 5 tab (mục 5.3). Không có các nút sửa, đặt lại mật khẩu, khóa hay xóa.
 - **Theo dõi cảnh báo học vụ**: màn **Cảnh báo** (mục 5.4).
 - **Lập báo cáo**: màn **Báo cáo & xuất file** (mục 5.5), xuất Excel hoặc PDF để trình ký, báo cáo trường.
 - **Xem chương trình đào tạo**: màn **CT đào tạo** (chỉ xem).
@@ -253,7 +263,7 @@ Cần sửa dữ liệu (thông tin sinh viên, chương trình đào tạo, k�
 
 ## 7. Hướng dẫn cho Trợ lý quản trị
 
-**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · Báo cáo & xuất file · CT đào tạo · Hoạt động
+**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · **Xét tốt nghiệp** · Báo cáo & xuất file · CT đào tạo · Hoạt động
 
 Trợ lý **xem toàn khoa** như Ban chủ nhiệm khoa, và được **thêm sinh viên**, **đề xuất sửa hồ sơ**.
 
@@ -276,7 +286,7 @@ Làm như mục 5.2: **Sinh viên** → **Thêm sinh viên** → nhập thông t
 
 ## 8. Hướng dẫn cho Cố vấn học tập
 
-**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · Báo cáo & xuất file · CT đào tạo · Hoạt động
+**Các màn hình:** Tổng quan · Sinh viên · Cảnh báo · **Xét tốt nghiệp** · Báo cáo & xuất file · CT đào tạo · Hoạt động
 
 Cố vấn học tập **chỉ thấy sinh viên các lớp mình được phân công cố vấn**. Mọi số liệu, biểu đồ và báo cáo đều tính trên phạm vi này.
 
@@ -310,21 +320,33 @@ Thêm hoặc sửa sinh viên, đặt lại mật khẩu, khóa tài khoản, s�
 ### 9.1. Trang chủ
 
 - **Chỉ số**: CPA, GPA kỳ gần nhất, tín chỉ tích lũy, tín chỉ còn thiếu, tín chỉ nợ, % tiến độ, cảnh báo học vụ (nếu có).
-- **Tiến trình theo khối kiến thức**: mỗi khối đã đạt bao nhiêu tín chỉ, còn thiếu học phần nào.
+- **Tab Điều kiện tốt nghiệp**: mình đã đủ điều kiện xét tốt nghiệp chưa; mỗi khối kiến thức đã đạt bao nhiêu tín chỉ so với yêu cầu (vd khối chung 21 TC, tự chọn 3/9 TC), còn thiếu học phần nào; học phần điều kiện (GDTC, GDQP-AN, kĩ năng bổ trợ) đã đạt chưa.
 - **Sửa hồ sơ**: cập nhật số điện thoại, email, quê quán, ngày sinh. Thay đổi có hiệu lực ngay, không cần duyệt.
 
 ### 9.2. Khai báo học tập
 
 Sinh viên **tự khai báo** mình học học phần nào, kỳ nào, được bao nhiêu điểm, **bất cứ lúc nào, không cần duyệt**. Cố vấn học tập và khoa thấy ngay.
 
-**Khai báo một học phần:**
-1. Bấm **Khai báo học phần**.
+**Cách nhanh nhất: Nhập điểm cả kỳ** (một bảng cho cả học kỳ):
+1. Bấm **Nhập điểm cả kỳ**, hoặc **Nhập / sửa điểm kỳ này** ở đầu một học kỳ đã khai báo.
+2. Chọn **Học kỳ**. Bảng tự liệt kê các học phần theo kế hoạch đào tạo của kỳ đó (bỏ qua học phần bạn đã đạt) và các học phần bạn đã khai báo ở kỳ này.
+3. Gõ **điểm hệ 10** vào ô của từng môn đã học, nhấn **Tab** để sang môn tiếp theo. Gõ điểm là môn đó tự được tích chọn; bên cạnh hiện ngay điểm chữ và hệ 4, đầu bảng hiện **Điểm TB học kỳ (hệ 4)** dự kiến.
+   - Môn không học kỳ này: để trống.
+   - Môn đang học, chưa có điểm: tích ô mà để trống điểm.
+   - Môn học khác kế hoạch (học vượt, học lại, tự chọn khác): thêm ở ô **Thêm học phần khác** cuối bảng.
+4. Bấm **Lưu N học phần**: lưu tất cả một lần.
+
+**Khai báo từng học phần** (khi chỉ thêm một vài môn):
+1. Bấm **Khai báo từng học phần**.
 2. **Học phần**: gõ mã hoặc tên để tìm trong chương trình đào tạo.
 3. **Học kỳ**: chọn HK1, HK2 hoặc học kỳ hè, từ năm nhập học tới năm học hiện tại.
 4. **Điểm**, chọn một trong hai cách:
    - **Có điểm**: nhập **điểm học phần hệ 10**, tức điểm tổng kết cuối cùng của học phần như trên bảng điểm (ví dụ `8.6`). Không nhập điểm giữa kì hay cuối kì riêng.
    - **Chưa có điểm**: học phần được ghi là *Đang học*; nhập điểm sau khi có kết quả.
-5. Bấm **Lưu**.
+5. Bấm **Lưu & nhập tiếp** (hoặc nhấn Enter trong ô điểm). Hộp thoại **không đóng**: học kỳ được giữ nguyên, ô học phần và ô điểm được xóa để nhập học phần tiếp theo; danh sách học phần vừa lưu hiện ngay trong hộp thoại.
+6. Nhập hết các học phần thì bấm **Xong**. Lần mở sau, hộp thoại chọn sẵn học kỳ bạn khai báo gần nhất.
+
+Học phần đã lưu vẫn sửa được bất cứ lúc nào: bấm vào ô điểm hoặc nút sửa ở dòng học phần đó.
 
 Từ điểm hệ 10, hệ thống tự quy ra **điểm chữ**, **điểm hệ 4** và trạng thái (đạt / không đạt). Ô xem trước trong hộp thoại hiện kết quả quy đổi ngay khi bạn gõ điểm.
 
@@ -343,7 +365,7 @@ Từ điểm hệ 10, hệ thống tự quy ra **điểm chữ**, **điểm hệ
 
 Điểm trung bình học kỳ = 56,1 / 19 = **2,95** (hệ 4), học lực **Khá**.
 
-Học phần **Giáo dục thể chất** và các học phần điều kiện khác vẫn khai báo điểm hệ 10 như bình thường, nhưng chỉ được xét **Đạt / Không đạt** và không tính vào điểm trung bình học kỳ hay số tín chỉ (xem mục 10.2).
+Học phần **PES1001 Giáo dục thể chất**, **DEF1001 GDQP-AN** và các học phần điều kiện khác vẫn khai báo điểm hệ 10 như bình thường, nhưng chỉ được xét **Đạt / Không đạt** và không tính vào điểm trung bình học kỳ hay số tín chỉ (xem mục 10.2).
 
 **Sửa hoặc xóa:** ở dòng học phần, bấm **Sửa kỳ / điểm** hoặc **Xóa**.
 
@@ -382,7 +404,7 @@ Nhật ký các thao tác liên quan đến tài khoản của bạn.
 
 - **GPA học kỳ**: tính mọi học phần trong kỳ, cả đạt và không đạt.
 - **CPA (trung bình chung tích lũy)**: chỉ tính học phần đã đạt; học cải thiện thì lần đạt gần nhất thay điểm cũ.
-- **Học phần điều kiện** (Giáo dục thể chất, GDQP-AN, kỹ năng bổ trợ…) **chỉ xét Đạt / Không đạt** (đạt khi điểm hệ 10 từ 4,0): không có điểm chữ, điểm hệ 4, và **không tính vào điểm TB học kỳ, CPA hay tín chỉ tích lũy**. Trong bảng điểm, cột *Điểm chữ* và *Điểm 4* của các học phần này hiện dấu `—`.
+- **Học phần điều kiện** (PES1001 Giáo dục thể chất, DEF1001 Giáo dục quốc phòng – an ninh, TMT2100 Kĩ năng bổ trợ) **chỉ xét Đạt / Không đạt** (đạt khi điểm hệ 10 từ 4,0): không có điểm chữ, điểm hệ 4, và **không tính vào điểm TB học kỳ, CPA hay tín chỉ tích lũy**. Trong bảng điểm, cột *Điểm chữ* và *Điểm 4* của các học phần này hiện dấu `—`.
 - Học kỳ hè được gộp vào học kỳ chính ngay trước nó.
 - **Xếp loại** theo GPA học kỳ: Xuất sắc ≥ 3,60 · Giỏi ≥ 3,20 · Khá ≥ 2,50 · Trung bình ≥ 2,00 · Yếu < 2,00.
 
