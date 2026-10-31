@@ -34,6 +34,24 @@ jobs:
       # sửa pubspec.yaml (nếu không, app sẽ báo cập nhật mãi không dứt).
       - run: flutter build windows --release --build-name=${{ steps.ver.outputs.version }} --build-number=${{ github.run_number }}
 
+      # Máy chưa cài Microsoft Visual C++ Redistributable báo thiếu
+      # VCRUNTIME140_1.dll. Bộ cài không cần quyền admin nên không cài được
+      # vc_redist: chép các DLL runtime cạnh qlgd_edu.exe (app-local
+      # deployment, được Microsoft cho phép) để Inno Setup đóng gói kèm.
+      - name: Kèm thư viện Visual C++ runtime
+        shell: pwsh
+        run: |
+          $dest = 'build\windows\x64\runner\Release'
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" -Directory |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $crt) { throw 'Không tìm thấy thư mục Microsoft.VC*.CRT' }
+          Copy-Item "$($crt.FullName)\*.dll" $dest -ErrorAction Stop
+          foreach ($dll in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') {
+            if (-not (Test-Path "$dest\$dll")) { throw "Thiếu $dll sau khi chép" }
+          }
+          Get-ChildItem $dest -Filter *.dll | Select-Object Name, Length
+
       - name: Cài Inno Setup
         run: choco install innosetup --no-progress -y
 
