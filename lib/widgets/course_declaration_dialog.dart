@@ -289,9 +289,12 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       text = 'Nhập điểm học phần hệ 10 (0 - 10).';
     } else {
       final g1 = double.parse(g.toStringAsFixed(1));
-      text = 'Điểm ${g1.toStringAsFixed(1)} → điểm chữ ${GradeScale.letter(g1)}'
-          ' · hệ 4: ${GradeScale.toFour(g1).toStringAsFixed(1)} · '
-          '${GradeScale.isPass(g1) ? 'Đạt' : 'Không đạt'}';
+      final result = GradeScale.isPass(g1) ? 'Đạt' : 'Không đạt';
+      text = _course?.conditional ?? false
+          ? 'Điểm ${g1.toStringAsFixed(1)} → $result. Học phần điều kiện chỉ '
+              'xét Đạt/Không đạt, không tính vào điểm TB và tín chỉ tích lũy.'
+          : 'Điểm ${g1.toStringAsFixed(1)} → điểm chữ ${GradeScale.letter(g1)}'
+              ' · hệ 4: ${GradeScale.toFour(g1).toStringAsFixed(1)} · $result';
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -30,7 +30,8 @@ class Course {
     this.prerequisite,
   });
 
-  String get typeLabel => mandatory ? 'Bắt buộc' : 'Tự chọn';
+  String get typeLabel =>
+      conditional ? 'Điều kiện' : (mandatory ? 'Bắt buộc' : 'Tự chọn');
 
   factory Course.fromMap(Map<String, Object?> m) => Course(
         id: (m['id'] as num).toInt(),

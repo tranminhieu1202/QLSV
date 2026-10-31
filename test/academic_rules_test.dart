@@ -83,6 +83,33 @@ void main() {
     expect(p.terms.single.standing, 'Khá');
   });
 
+  test('học phần điều kiện (GDTC) chỉ xét đạt, không tính điểm TB và TC', () {
+    final pe = Course(
+      id: 200,
+      code: 'PES1001',
+      name: 'Giáo dục thể chất',
+      credits: 4,
+      mandatory: true,
+      conditional: true,
+      plannedSemester: 1,
+      semesterText: '1',
+      block: 'I',
+      blockName: 'I',
+    );
+    final c = _course(201);
+    final e = [_enr(c, '20241', 8.0), _enr(pe, '20241', 2.0)];
+    final p = AcademicService.compute(_student, e, [c, pe], term: '20261');
+    // Chỉ HP thường: GPA 3.5, 3 TC; GDTC trượt không gây nợ hay cảnh báo.
+    expect(p.terms.single.gpa, 3.5);
+    expect(p.terms.single.registeredCredits, 3);
+    expect(p.passedCredits, 3);
+    expect(p.debtCredits, 0);
+    expect(e.last.passFailOnly, isTrue);
+    expect(e.last.letterText, '—');
+    expect(e.last.fourText, '—');
+    expect(e.first.letterText, 'B+');
+  });
+
   test('năm đào tạo theo TC tích lũy & ngưỡng CPA (Điều 17, 44)', () {
     expect([for (final c in [0, 34, 35, 70, 71, 105, 106, 140, 141])
         AcademicService.trainingYearFor(c)],

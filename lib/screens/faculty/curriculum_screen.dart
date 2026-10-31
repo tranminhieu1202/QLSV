@@ -185,7 +185,7 @@ class _CurriculumScreenState extends State<CurriculumScreen>
   Widget _typeChip(Course c) {
     final color =
         c.conditional ? AppColors.textMuted : (c.mandatory ? AppColors.primary : AppColors.info);
-    final label = c.conditional ? 'Điều kiện' : c.typeLabel;
+    final label = c.typeLabel;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

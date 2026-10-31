@@ -83,6 +83,17 @@ class Enrollment {
         approval: ApprovalX.fromKey(m['approval'] as String?),
         course: course,
       );
+
+  /// Học phần điều kiện (GDTC, GDQP-AN...): chỉ xét Đạt/Không đạt, không có
+  /// điểm chữ/hệ 4 và không tính vào điểm TB học kỳ, CPA, tín chỉ tích lũy.
+  bool get passFailOnly => course?.conditional ?? false;
+
+  /// Điểm chữ để hiển thị; '—' với học phần điều kiện.
+  String get letterText => passFailOnly ? '—' : (gradeLetter ?? '-');
+
+  /// Điểm hệ 4 để hiển thị; '—' với học phần điều kiện.
+  String get fourText =>
+      passFailOnly ? '—' : (grade4?.toStringAsFixed(1) ?? '-');
 }
 
 /// Quy đổi điểm theo Quy chế đào tạo đại học tại ĐHQGHN

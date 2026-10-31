@@ -196,10 +196,12 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
 
   Widget _termCard(String term, List<Enrollment> list) {
     // Điểm TB học kỳ hệ 4 = Σ(hệ 4 × TC) / Σ TC của các học phần đã có điểm,
-    // tính cả học phần không đạt (Điều 42 khoản 3).
+    // tính cả học phần không đạt (Điều 42 khoản 3). Học phần điều kiện (GDTC,
+    // GDQP-AN...) chỉ xét Đạt/Không đạt nên không tính vào TC và điểm TB.
     var credits = 0, graded = 0;
     double quality = 0;
     for (final e in list) {
+      if (e.passFailOnly) continue;
       final c = e.course?.credits ?? 0;
       credits += c;
       if (e.grade4 != null) {
@@ -222,7 +224,7 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                         fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 12),
                 Text(
-                    '${list.length} học phần · $credits TC'
+                    '${list.length} học phần · $credits TC tính điểm'
                     '${gpa == null ? '' : ' · Điểm TB học kỳ (hệ 4): ${gpa.toStringAsFixed(2)} (${GradeScale.standing(gpa)})'}',
                     style: const TextStyle(color: AppColors.textMuted)),
                 const Spacer(),
@@ -267,8 +269,8 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                       DataCell(Text(e.grade10?.toStringAsFixed(1) ?? '-',
                           style:
                               const TextStyle(fontWeight: FontWeight.w600))),
-                      DataCell(Text(e.gradeLetter ?? '-')),
-                      DataCell(Text(e.grade4?.toStringAsFixed(1) ?? '-')),
+                      DataCell(Text(e.letterText)),
+                      DataCell(Text(e.fourText)),
                       DataCell(EnrollStatusChip(e.status)),
                       DataCell(Row(
                         mainAxisSize: MainAxisSize.min,

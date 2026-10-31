@@ -343,6 +343,8 @@ Từ điểm hệ 10, hệ thống tự quy ra **điểm chữ**, **điểm hệ
 
 Điểm trung bình học kỳ = 56,1 / 19 = **2,95** (hệ 4), học lực **Khá**.
 
+Học phần **Giáo dục thể chất** và các học phần điều kiện khác vẫn khai báo điểm hệ 10 như bình thường, nhưng chỉ được xét **Đạt / Không đạt** và không tính vào điểm trung bình học kỳ hay số tín chỉ (xem mục 10.2).
+
 **Sửa hoặc xóa:** ở dòng học phần, bấm **Sửa kỳ / điểm** hoặc **Xóa**.
 
 **Học lại, học cải thiện:** khai báo lại học phần đó ở kỳ mới. Lần đạt gần nhất sẽ thay điểm cũ khi tính CPA.
@@ -380,7 +382,8 @@ Nhật ký các thao tác liên quan đến tài khoản của bạn.
 
 - **GPA học kỳ**: tính mọi học phần trong kỳ, cả đạt và không đạt.
 - **CPA (trung bình chung tích lũy)**: chỉ tính học phần đã đạt; học cải thiện thì lần đạt gần nhất thay điểm cũ.
-- Học phần điều kiện (GDTC, GDQP-AN…) không tính vào GPA/CPA. Học kỳ hè được gộp vào học kỳ chính ngay trước nó.
+- **Học phần điều kiện** (Giáo dục thể chất, GDQP-AN, kỹ năng bổ trợ…) **chỉ xét Đạt / Không đạt** (đạt khi điểm hệ 10 từ 4,0): không có điểm chữ, điểm hệ 4, và **không tính vào điểm TB học kỳ, CPA hay tín chỉ tích lũy**. Trong bảng điểm, cột *Điểm chữ* và *Điểm 4* của các học phần này hiện dấu `—`.
+- Học kỳ hè được gộp vào học kỳ chính ngay trước nó.
 - **Xếp loại** theo GPA học kỳ: Xuất sắc ≥ 3,60 · Giỏi ≥ 3,20 · Khá ≥ 2,50 · Trung bình ≥ 2,00 · Yếu < 2,00.
 
 ### 10.3. Năm đào tạo
