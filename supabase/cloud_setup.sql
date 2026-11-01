@@ -456,7 +456,7 @@ values
   ('POL1001', 'Tư tưởng Hồ Chí Minh', 2, true, 2, '2', 'I', null, false, false),
   ('THL1057', 'Nhà nước và Pháp luật đại cương', 2, true, 2, '2', 'I', null, false, false),
   ('FLF1101', 'Ngoại ngữ B1', 5, true, 2, '2-4', 'I', null, false, false),
-  ('VNU1001', 'Nhập môn công nghệ số và ứng dụng trí tuệ nhân tạo', 3, true, 2, '2', 'I', null, false, false),
+  ('VNU1001', 'Nhập môn công nghệ số và ứng dụng trí tuệ nhân tạo (Tin học cơ sở)', 3, true, 2, '2', 'I', null, false, false),
   ('TMT2100', 'Kĩ năng bổ trợ', 3, true, 3, '3-7', 'I', null, true, false),
   ('PES1001', 'Giáo dục thể chất', 4, true, 2, '2-7', 'I', null, true, false),
   ('DEF1001', 'Giáo dục quốc phòng – an ninh', 8, true, 2, '2-3', 'I', null, true, false),
