@@ -41,6 +41,18 @@ final _courses = [
         block: k < 3 ? 'I' : 'II.2',
         blockName: 'I',
       ),
+  const Course(
+    id: 900,
+    code: 'PES1001',
+    name: 'Giáo dục thể chất',
+    credits: 4,
+    mandatory: true,
+    conditional: true,
+    plannedSemester: 2,
+    semesterText: '2-7',
+    block: 'I',
+    blockName: 'I',
+  ),
 ];
 
 final _enrollments = [
@@ -151,6 +163,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('(hệ 4): 3.70'), findsOneWidget);
     expect(tester.takeException(), isNull);
+
+    // GDTC: không có ô điểm, chỉ chọn Đạt / Không đạt.
+    expect(find.text('PES1001 · Giáo dục thể chất'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Đạt'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Không đạt'), findsOneWidget);
+    final fields = find.byType(TextField).evaluate().length;
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Đạt'));
+    await tester.pumpAndSettle();
+    expect(find.text('Không tính điểm TB'), findsOneWidget);
+    expect(find.text('Lưu 2 học phần'), findsOneWidget);
+    // Không thêm ô điểm nào cho GDTC; điểm TB kỳ không đổi.
+    expect(find.byType(TextField).evaluate().length, fields);
+    expect(find.textContaining('(hệ 4): 3.70'), findsOneWidget);
   });
 
   testWidgets('màn Xét tốt nghiệp hiển thị danh sách', (tester) async {

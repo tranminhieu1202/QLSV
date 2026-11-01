@@ -772,7 +772,7 @@ class Repository {
       return 'Không lưu được: ${e.message}';
     }
     await addAudit(actor, 'Khai báo học phần',
-        '${course.code} · ${course.name} (kỳ $term)${_gradeText(grade10)}',
+        '${course.code} · ${course.name} (kỳ $term)${_gradeText(grade10, course)}',
         studentCode: student.studentCode);
     return null;
   }
@@ -798,7 +798,7 @@ class Repository {
       return 'Không lưu được: ${err.message}';
     }
     await addAudit(actor, 'Sửa khai báo học phần',
-        '${e.course?.code ?? ''} (kỳ $term)${_gradeText(grade10)}',
+        '${e.course?.code ?? ''} (kỳ $term)${_gradeText(grade10, e.course)}',
         studentCode: studentCode);
     return null;
   }
@@ -814,9 +814,12 @@ class Repository {
   static double? _grade(double? v) =>
       v == null ? null : double.parse(v.toStringAsFixed(1));
 
-  static String _gradeText(double? grade10) {
+  static String _gradeText(double? grade10, Course? course) {
     if (grade10 == null) return '';
     final g = _grade(grade10)!;
+    if (course?.conditional ?? false) {
+      return GradeScale.isPass(g) ? ' · Đạt' : ' · Không đạt';
+    }
     return ' · điểm ${g.toStringAsFixed(1)} (${GradeScale.letter(g)})';
   }
 

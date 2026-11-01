@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'data/supabase_config.dart';
 import 'data/update_service.dart';
 import 'providers/app_state.dart';
+import 'widgets/version_badge.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
@@ -61,6 +62,17 @@ class _QlgdAppState extends State<QlgdApp> {
       title: 'Hệ thống Quản lý Đào tạo – Khoa QLGD',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      // Nhãn phiên bản nổi ở góc dưới bên phải, không chặn thao tác bấm.
+      builder: (context, child) => Stack(
+        children: [
+          ?child,
+          const Positioned(
+            right: 8,
+            bottom: 6,
+            child: IgnorePointer(child: VersionBadge()),
+          ),
+        ],
+      ),
       home: Consumer<AppState>(
         builder: (context, state, _) => state.restoring
             ? const Scaffold(body: Center(child: CircularProgressIndicator()))

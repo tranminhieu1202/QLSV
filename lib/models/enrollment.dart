@@ -94,6 +94,18 @@ class Enrollment {
   /// Điểm hệ 4 để hiển thị; '—' với học phần điều kiện.
   String get fourText =>
       passFailOnly ? '—' : (grade4?.toStringAsFixed(1) ?? '-');
+
+  /// Cột "Điểm 10": học phần điều kiện hiện Đạt / Không đạt thay cho điểm.
+  String get grade10Text {
+    if (passFailOnly) {
+      return switch (status) {
+        EnrollStatus.passed => 'Đạt',
+        EnrollStatus.failed => 'Không đạt',
+        _ => '-',
+      };
+    }
+    return grade10?.toStringAsFixed(1) ?? '-';
+  }
 }
 
 /// Quy đổi điểm theo Quy chế đào tạo đại học tại ĐHQGHN
@@ -103,6 +115,12 @@ class Enrollment {
 /// điểm); điểm chữ và hệ 4 suy ra từ đó, GPA học kỳ là trung bình hệ 4 có
 /// trọng số tín chỉ.
 class GradeScale {
+  /// Học phần điều kiện (PES1001, DEF1001...) chỉ khai báo Đạt / Không đạt.
+  /// Máy chủ vẫn suy trạng thái từ điểm hệ 10, nên lưu một mốc điểm quy ước:
+  /// Đạt = 10, Không đạt = 0 (không hiển thị, không tính GPA/CPA).
+  static const double passMark = 10.0;
+  static const double failMark = 0.0;
+
   static String letter(double g10) {
     if (g10 >= 9.0) return 'A+';
     if (g10 >= 8.5) return 'A';

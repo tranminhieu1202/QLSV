@@ -109,6 +109,8 @@ void main() {
     expect(e.last.letterText, '—');
     expect(e.last.fourText, '—');
     expect(e.first.letterText, 'B+');
+    expect(e.last.grade10Text, 'Không đạt');
+    expect(e.first.grade10Text, '8.0');
   });
 
   test('điều kiện tốt nghiệp: khối tự chọn 3/9 TC, HP điều kiện phải đạt', () {

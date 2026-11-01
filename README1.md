@@ -65,6 +65,8 @@ Khi ứng dụng có mặt trên **Mac App Store**, người dùng Mac có thể
 
 ## 3. Đăng nhập và các chức năng chung
 
+> **Phiên bản đang dùng** hiện ở góc dưới bên phải mọi màn hình (ví dụ *Phiên bản 1.1.9*). Khi báo lỗi, hãy gửi kèm số phiên bản này.
+
 ### 3.1. Đăng nhập
 
 - **Cán bộ**: đăng nhập bằng **tên đăng nhập** do quản trị cấp (ví dụ `nguyenvana`).
@@ -365,7 +367,7 @@ Từ điểm hệ 10, hệ thống tự quy ra **điểm chữ**, **điểm hệ
 
 Điểm trung bình học kỳ = 56,1 / 19 = **2,95** (hệ 4), học lực **Khá**.
 
-Học phần **PES1001 Giáo dục thể chất**, **DEF1001 GDQP-AN** và các học phần điều kiện khác vẫn khai báo điểm hệ 10 như bình thường, nhưng chỉ được xét **Đạt / Không đạt** và không tính vào điểm trung bình học kỳ hay số tín chỉ (xem mục 10.2).
+Học phần **PES1001 Giáo dục thể chất**, **DEF1001 GDQP-AN** và các học phần điều kiện khác **không nhập điểm**: chỉ chọn **Đạt** hoặc **Không đạt** (hoặc *Chưa có kết quả* nếu đang học). Các học phần này không tính vào điểm trung bình học kỳ hay số tín chỉ (xem mục 10.2).
 
 **Sửa hoặc xóa:** ở dòng học phần, bấm **Sửa kỳ / điểm** hoặc **Xóa**.
 
@@ -404,7 +406,7 @@ Nhật ký các thao tác liên quan đến tài khoản của bạn.
 
 - **GPA học kỳ**: tính mọi học phần trong kỳ, cả đạt và không đạt.
 - **CPA (trung bình chung tích lũy)**: chỉ tính học phần đã đạt; học cải thiện thì lần đạt gần nhất thay điểm cũ.
-- **Học phần điều kiện** (PES1001 Giáo dục thể chất, DEF1001 Giáo dục quốc phòng – an ninh, TMT2100 Kĩ năng bổ trợ) **chỉ xét Đạt / Không đạt** (đạt khi điểm hệ 10 từ 4,0): không có điểm chữ, điểm hệ 4, và **không tính vào điểm TB học kỳ, CPA hay tín chỉ tích lũy**. Trong bảng điểm, cột *Điểm chữ* và *Điểm 4* của các học phần này hiện dấu `—`.
+- **Học phần điều kiện** (PES1001 Giáo dục thể chất, DEF1001 Giáo dục quốc phòng – an ninh, TMT2100 Kĩ năng bổ trợ) **chỉ xét Đạt / Không đạt**: sinh viên chọn Đạt hoặc Không đạt thay vì nhập điểm; không có điểm chữ, điểm hệ 4, và **không tính vào điểm TB học kỳ, CPA hay tín chỉ tích lũy**. Trong bảng điểm, cột *Điểm 10* của các học phần này ghi *Đạt* / *Không đạt*, cột *Điểm chữ* và *Điểm 4* hiện dấu `—`.
 - Học kỳ hè được gộp vào học kỳ chính ngay trước nó.
 - **Xếp loại** theo GPA học kỳ: Xuất sắc ≥ 3,60 · Giỏi ≥ 3,20 · Khá ≥ 2,50 · Trung bình ≥ 2,00 · Yếu < 2,00.
 

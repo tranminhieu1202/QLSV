@@ -8,7 +8,9 @@ import '../models/student.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 
-enum _GradeMode { graded, none }
+/// graded: nhập điểm hệ 10. pass / fail: học phần điều kiện (PES1001,
+/// DEF1001...) chỉ chọn Đạt / Không đạt. none: đang học, chưa có kết quả.
+enum _GradeMode { graded, pass, fail, none }
 
 /// Sinh viên tự khai báo (hoặc sửa) một học phần: học ở kỳ nào và được bao
 /// nhiêu điểm. Không cần duyệt – lưu là có hiệu lực, cán bộ theo dõi ngay.
@@ -66,13 +68,23 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
     final e = widget.editing;
     final state = context.read<AppState>();
     _course = e?.course ?? widget.initialCourse;
-    _term = e?.term ??
+    _term =
+        e?.term ??
         widget.initialTerm ??
         _lastTerm[widget.student.id] ??
         state.currentTerm;
-    _terms = AcademicService.termOptions(widget.student, state.currentTerm,
-        existing: [_term, for (final x in widget.enrollments) x.term]);
-    if (e != null) {
+    _terms = AcademicService.termOptions(
+      widget.student,
+      state.currentTerm,
+      existing: [_term, for (final x in widget.enrollments) x.term],
+    );
+    if (e != null && (e.course?.conditional ?? false)) {
+      _mode = switch (e.status) {
+        EnrollStatus.passed => _GradeMode.pass,
+        EnrollStatus.failed => _GradeMode.fail,
+        _ => _GradeMode.none,
+      };
+    } else if (e != null) {
       // Bản ghi cũ nhập theo điểm thành phần vẫn có grade10 đã tính sẵn.
       if (e.grade10 != null) {
         _gradeCtrl.text = e.grade10!.toStringAsFixed(1);
@@ -100,14 +112,34 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       c.text.trim().isNotEmpty && _parse(c.text) == null;
 
   /// Điểm học phần hệ 10 gửi lên máy chủ; null khi chưa có điểm.
-  double? get _grade10 =>
-      _mode == _GradeMode.graded ? _parse(_gradeCtrl.text) : null;
+  double? get _grade10 => switch (_mode) {
+    _GradeMode.graded => _parse(_gradeCtrl.text),
+    _GradeMode.pass => GradeScale.passMark,
+    _GradeMode.fail => GradeScale.failMark,
+    _GradeMode.none => null,
+  };
+
+  bool get _passFail => _course?.conditional ?? false;
+
+  /// Đổi học phần: học phần điều kiện mặc định "Chưa có kết quả" để sinh
+  /// viên tự chọn Đạt / Không đạt; học phần thường quay về nhập điểm.
+  void _selectCourse(Course? c) {
+    setState(() {
+      _course = c;
+      if (c?.conditional ?? false) {
+        if (_mode == _GradeMode.graded) _mode = _GradeMode.none;
+      } else if (_mode == _GradeMode.pass || _mode == _GradeMode.fail) {
+        _mode = _GradeMode.graded;
+      }
+    });
+  }
 
   String? get _note {
     final c = _course;
     if (c == null) return null;
-    final others =
-        widget.enrollments.where((x) => x.courseId == c.id && x.id != widget.editing?.id);
+    final others = widget.enrollments.where(
+      (x) => x.courseId == c.id && x.id != widget.editing?.id,
+    );
     if (others.any((x) => x.term == _term) ||
         _saved.any((x) => x.course.id == c.id && x.term == _term)) {
       return 'Học phần này đã được khai báo ở kỳ $_term.';
@@ -130,8 +162,10 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
     }
     if (_mode == _GradeMode.graded) {
       if (_gradeCtrl.text.trim().isEmpty) {
-        setState(() => _error =
-            'Nhập điểm học phần, hoặc chọn "Chưa có điểm" nếu đang học.');
+        setState(
+          () => _error =
+              'Nhập điểm học phần, hoặc chọn "Chưa có điểm" nếu đang học.',
+        );
         return;
       }
       if (_invalid(_gradeCtrl)) {
@@ -152,13 +186,15 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
             course: _course!,
             term: _term,
             grade10: grade10,
-            actor: state.user!)
+            actor: state.user!,
+          )
         : await state.repo.updateDeclaration(
             e: e,
             term: _term,
             grade10: grade10,
             actor: state.user!,
-            studentCode: widget.student.studentCode);
+            studentCode: widget.student.studentCode,
+          );
     if (!mounted) return;
     if (err != null) {
       setState(() {
@@ -183,8 +219,9 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       _saving = false;
     });
     // Ô học phần được dựng lại ở frame sau; đợi rồi mới đưa con trỏ vào.
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _courseFocus.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _courseFocus.requestFocus(),
+    );
   }
 
   void _close() => Navigator.pop(context, _saved.isNotEmpty);
@@ -202,8 +239,10 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (editing)
-                Text('${_course?.code} · ${_course?.name} (${_course?.credits} TC)',
-                    style: const TextStyle(fontWeight: FontWeight.w600))
+                Text(
+                  '${_course?.code} · ${_course?.name} (${_course?.credits} TC)',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                )
               else
                 _coursePicker(),
               if (_saved.isNotEmpty) ...[
@@ -217,19 +256,41 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
                 items: [
                   for (final t in _terms)
                     DropdownMenuItem(
-                        value: t,
-                        child: Text('${AcademicService.termLabel(t)} ($t)')),
+                      value: t,
+                      child: Text('${AcademicService.termLabel(t)} ($t)'),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _term = v ?? _term),
               ),
               const SizedBox(height: 16),
               SegmentedButton<_GradeMode>(
-                segments: const [
-                  ButtonSegment(
-                      value: _GradeMode.graded, label: Text('Có điểm')),
-                  ButtonSegment(
-                      value: _GradeMode.none, label: Text('Chưa có điểm')),
-                ],
+                segments: _passFail
+                    ? const [
+                        ButtonSegment(
+                          value: _GradeMode.pass,
+                          icon: Icon(Icons.check_circle_outline),
+                          label: Text('Đạt'),
+                        ),
+                        ButtonSegment(
+                          value: _GradeMode.fail,
+                          icon: Icon(Icons.cancel_outlined),
+                          label: Text('Không đạt'),
+                        ),
+                        ButtonSegment(
+                          value: _GradeMode.none,
+                          label: Text('Chưa có kết quả'),
+                        ),
+                      ]
+                    : const [
+                        ButtonSegment(
+                          value: _GradeMode.graded,
+                          label: Text('Có điểm'),
+                        ),
+                        ButtonSegment(
+                          value: _GradeMode.none,
+                          label: Text('Chưa có điểm'),
+                        ),
+                      ],
                 selected: {_mode},
                 onSelectionChanged: (v) => setState(() => _mode = v.first),
               ),
@@ -239,15 +300,17 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
               _preview(),
               if (_note != null) ...[
                 const SizedBox(height: 8),
-                Text(_note!,
-                    style: const TextStyle(
-                        color: AppColors.info, fontSize: 12)),
+                Text(
+                  _note!,
+                  style: const TextStyle(color: AppColors.info, fontSize: 12),
+                ),
               ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(_error!,
-                    style:
-                        const TextStyle(color: AppColors.danger, fontSize: 12)),
+                Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                ),
               ],
             ],
           ),
@@ -255,19 +318,24 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: _saving ? null : _close,
-            child: Text(editing
+          onPressed: _saving ? null : _close,
+          child: Text(
+            editing
                 ? 'Hủy'
                 : _saved.isEmpty
-                    ? 'Đóng'
-                    : 'Xong (đã lưu ${_saved.length})')),
+                ? 'Đóng'
+                : 'Xong (đã lưu ${_saved.length})',
+          ),
+        ),
         ElevatedButton(
           onPressed: _saving ? null : _save,
-          child: Text(_saving
-              ? 'Đang lưu...'
-              : editing
-                  ? 'Lưu'
-                  : 'Lưu & nhập tiếp'),
+          child: Text(
+            _saving
+                ? 'Đang lưu...'
+                : editing
+                ? 'Lưu'
+                : 'Lưu & nhập tiếp',
+          ),
         ),
       ],
     );
@@ -298,7 +366,7 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
             labelWidget: Text('${c.code} · ${c.name} (${c.credits} TC)'),
           ),
       ],
-      onSelected: (c) => setState(() => _course = c),
+      onSelected: _selectCourse,
     );
   }
 
@@ -321,10 +389,15 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
             onSubmitted: (_) => _saving ? null : _save(),
           ),
         ];
+      case _GradeMode.pass:
+      case _GradeMode.fail:
+        return const [];
       case _GradeMode.none:
         return const [
-          Text('Học phần được ghi là "Đang học"; nhập điểm sau khi có kết quả.',
-              style: TextStyle(color: AppColors.textMuted)),
+          Text(
+            'Học phần được ghi là "Đang học"; khai báo kết quả sau.',
+            style: TextStyle(color: AppColors.textMuted),
+          ),
         ];
     }
   }
@@ -339,21 +412,31 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Đã lưu ${_saved.length} học phần – chọn học phần tiếp theo, '
-              'hoặc bấm "Xong" khi nhập hết.',
-              style: const TextStyle(
-                  color: AppColors.ok, fontWeight: FontWeight.w600)),
+          Text(
+            'Đã lưu ${_saved.length} học phần – chọn học phần tiếp theo, '
+            'hoặc bấm "Xong" khi nhập hết.',
+            style: const TextStyle(
+              color: AppColors.ok,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 4),
           for (final x in _saved.take(5))
             Text(
-                '✓ ${x.course.code} · ${x.course.name} – kỳ ${x.term}: '
-                '${x.grade10 == null ? 'Đang học' : x.grade10!.toStringAsFixed(1)}',
-                style: const TextStyle(fontSize: 12),
-                overflow: TextOverflow.ellipsis),
+              '✓ ${x.course.code} · ${x.course.name} – kỳ ${x.term}: '
+              '${x.grade10 == null
+                  ? 'Đang học'
+                  : x.course.conditional
+                  ? (GradeScale.isPass(x.grade10!) ? 'Đạt' : 'Không đạt')
+                  : x.grade10!.toStringAsFixed(1)}',
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
           if (_saved.length > 5)
-            Text('… và ${_saved.length - 5} học phần khác',
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textMuted)),
+            Text(
+              '… và ${_saved.length - 5} học phần khác',
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
         ],
       ),
     );
@@ -364,6 +447,11 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
     final String text;
     if (_mode == _GradeMode.none) {
       text = 'Trạng thái: Đang học';
+    } else if (_passFail) {
+      text =
+          '${_mode == _GradeMode.pass ? 'Đạt' : 'Không đạt'}. Học phần '
+          'điều kiện chỉ xét Đạt/Không đạt, không tính vào điểm TB và tín chỉ '
+          'tích lũy.';
     } else if (g == null) {
       text = 'Nhập điểm học phần hệ 10 (0 - 10).';
     } else {
@@ -371,9 +459,9 @@ class _CourseDeclarationDialogState extends State<CourseDeclarationDialog> {
       final result = GradeScale.isPass(g1) ? 'Đạt' : 'Không đạt';
       text = _course?.conditional ?? false
           ? 'Điểm ${g1.toStringAsFixed(1)} → $result. Học phần điều kiện chỉ '
-              'xét Đạt/Không đạt, không tính vào điểm TB và tín chỉ tích lũy.'
+                'xét Đạt/Không đạt, không tính vào điểm TB và tín chỉ tích lũy.'
           : 'Điểm ${g1.toStringAsFixed(1)} → điểm chữ ${GradeScale.letter(g1)}'
-              ' · hệ 4: ${GradeScale.toFour(g1).toStringAsFixed(1)} · $result';
+                ' · hệ 4: ${GradeScale.toFour(g1).toStringAsFixed(1)} · $result';
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

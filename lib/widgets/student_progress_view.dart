@@ -277,7 +277,7 @@ class _StudentProgressViewState extends State<StudentProgressView>
 
   /// Điểm học phần hệ 10; sinh viên bấm vào để sửa.
   Widget _gradeCell(Enrollment e) {
-    final grade = Text(e.grade10?.toStringAsFixed(1) ?? '-',
+    final grade = Text(e.grade10Text,
         style: const TextStyle(fontWeight: FontWeight.w600));
     if (!widget.canEditGrades) return grade;
     return InkWell(

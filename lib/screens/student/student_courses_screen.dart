@@ -327,7 +327,7 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen>
                         DataCell(Text('${e.course?.credits ?? 0}')),
                         DataCell(
                           Text(
-                            e.grade10?.toStringAsFixed(1) ?? '-',
+                            e.grade10Text,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ),
