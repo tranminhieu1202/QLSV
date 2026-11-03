@@ -19,16 +19,54 @@ class AccountsScreen extends StatefulWidget {
 class _AccountsScreenState extends State<AccountsScreen>
     with RevisionReload {
   List<AppUser> _accounts = [];
+  Map<String, String> _classAdvisors = {}; // lớp → id CVHT
+  List<String> _classes = [];
   bool _loading = true;
 
   Future<void> _load() async {
     final repo = context.read<AppState>().repo;
     final data = await repo.facultyAccounts();
+    final ca = await repo.classAdvisors();
+    final classes = await repo.classNames();
     if (!mounted) return;
     setState(() {
       _accounts = data;
+      _classAdvisors = ca;
+      _classes = classes;
       _loading = false;
     });
+  }
+
+  List<String> _classesOf(AppUser u) => [
+        for (final e in _classAdvisors.entries)
+          if (e.value == u.id) e.key
+      ]..sort();
+
+  Future<void> _assignClasses(AppUser u) async {
+    final names = {for (final a in _accounts) a.id: a.fullName};
+    final result = await showDialog<Set<String>>(
+      context: context,
+      builder: (_) => _ClassAssignDialog(
+        advisor: u,
+        classes: _classes,
+        assigned: _classAdvisors,
+        advisorNames: names,
+      ),
+    );
+    if (result == null || !mounted) return;
+    final state = context.read<AppState>();
+    final err = await state.repo.setAdvisorClasses(u, result, state.user!);
+    if (!mounted) return;
+    if (err != null) {
+      _snack(err, AppColors.danger);
+      return;
+    }
+    _snack(
+        result.isEmpty
+            ? '${u.fullName} không còn phụ trách lớp nào.'
+            : 'Đã phân lớp ${(result.toList()..sort()).join(', ')} cho ${u.fullName}.',
+        AppColors.ok);
+    await state.bumpData();
   }
 
   Future<void> _add() async {
@@ -156,6 +194,10 @@ class _AccountsScreenState extends State<AccountsScreen>
         'Đăng nhập: ${u.username}',
         if ((u.phone ?? '').isNotEmpty) 'SĐT: ${u.phone}',
         if ((u.email ?? '').isNotEmpty) u.email!,
+        if (u.role == UserRole.advisor)
+          _classesOf(u).isEmpty
+              ? 'Chưa phân lớp'
+              : 'Lớp: ${_classesOf(u).join(', ')}',
       ].join(' · ')),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -172,6 +214,14 @@ class _AccountsScreenState extends State<AccountsScreen>
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
           ),
+          if (u.role == UserRole.advisor) ...[
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: () => _assignClasses(u),
+              icon: const Icon(Icons.class_outlined, size: 18),
+              label: const Text('Phân lớp'),
+            ),
+          ],
           if (u.id != me?.id)
             PopupMenuButton<String>(
               tooltip: 'Thao tác',
@@ -330,6 +380,152 @@ class _StaffDialogState extends State<_StaffDialog> {
               : const Text('Tạo tài khoản'),
         ),
       ],
+    );
+  }
+}
+
+/// Chọn các lớp CVHT phụ trách. Trả về tập lớp đã chọn, null khi hủy.
+class _ClassAssignDialog extends StatefulWidget {
+  const _ClassAssignDialog({
+    required this.advisor,
+    required this.classes,
+    required this.assigned,
+    required this.advisorNames,
+  });
+
+  final AppUser advisor;
+  final List<String> classes;
+  final Map<String, String> assigned; // lớp → id CVHT hiện tại
+  final Map<String, String> advisorNames;
+
+  @override
+  State<_ClassAssignDialog> createState() => _ClassAssignDialogState();
+}
+
+class _ClassAssignDialogState extends State<_ClassAssignDialog> {
+  late final Set<String> _selected = {
+    for (final e in widget.assigned.entries)
+      if (e.value == widget.advisor.id) e.key
+  };
+  late final List<String> _all = {
+    ...widget.classes,
+    ...widget.assigned.keys,
+  }.toList()
+    ..sort();
+  final _newCtrl = TextEditingController();
+  String _filter = '';
+
+  @override
+  void dispose() {
+    _newCtrl.dispose();
+    super.dispose();
+  }
+
+  void _addNew() {
+    final c = _newCtrl.text.trim();
+    if (c.isEmpty) return;
+    setState(() {
+      if (!_all.contains(c)) _all..add(c)..sort();
+      _selected.add(c);
+      _newCtrl.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _filter.trim().toLowerCase();
+    final shown = _all.where((c) => c.toLowerCase().contains(q)).toList();
+    return AlertDialog(
+      title: Text('Phân lớp cho ${widget.advisor.fullName}'),
+      content: SizedBox(
+        width: 480,
+        height: 460,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Tích các lớp CVHT phụ trách. Mọi sinh viên của lớp (kể cả sinh '
+              'viên thêm sau) tự được gán CVHT này; CVHT chỉ xem được sinh '
+              'viên các lớp mình phụ trách.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              decoration: const InputDecoration(
+                isDense: true,
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Tìm lớp',
+              ),
+              onChanged: (v) => setState(() => _filter = v),
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: shown.isEmpty
+                  ? const Center(child: Text('Chưa có lớp nào.'))
+                  : ListView(
+                      children: [
+                        for (final c in shown) _classTile(c),
+                      ],
+                    ),
+            ),
+            const Divider(),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _newCtrl,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Lớp mới (chưa có sinh viên)',
+                  ),
+                  onSubmitted: (_) => _addNew(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: _addNew,
+                icon: const Icon(Icons.add),
+                label: const Text('Thêm'),
+              ),
+            ]),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy')),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _selected),
+          child: Text('Lưu (${_selected.length} lớp)'),
+        ),
+      ],
+    );
+  }
+
+  Widget _classTile(String c) {
+    final owner = widget.assigned[c];
+    final other = owner != null && owner != widget.advisor.id;
+    final checked = _selected.contains(c);
+    return CheckboxListTile(
+      dense: true,
+      value: checked,
+      title: Text(c),
+      subtitle: other
+          ? Text(
+              checked
+                  ? 'Sẽ chuyển từ ${widget.advisorNames[owner] ?? 'CVHT khác'}'
+                  : 'Đang thuộc ${widget.advisorNames[owner] ?? 'CVHT khác'}',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: checked ? AppColors.warn : AppColors.textMuted))
+          : null,
+      onChanged: (v) => setState(() {
+        if (v == true) {
+          _selected.add(c);
+        } else {
+          _selected.remove(c);
+        }
+      }),
     );
   }
 }

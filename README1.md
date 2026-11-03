@@ -232,7 +232,13 @@ Kỳ hiện tại quyết định sinh viên đang học năm thứ mấy. Ví d
 - **Khóa / mở khóa**: bấm nút **…** ở cuối dòng tài khoản.
 - **Xóa tài khoản**: bấm nút **…** → **Xóa tài khoản**. **Không hoàn tác được.**
 
-Sau khi tạo tài khoản CVHT, phân công cố vấn cho sinh viên ở bước *Thêm sinh viên* hoặc *Sửa thông tin* trong hồ sơ.
+- **Phân lớp cho CVHT**: ở dòng tài khoản CVHT, bấm **Phân lớp** → tích các lớp CVHT phụ trách (tìm theo tên lớp; lớp chưa có sinh viên thì gõ ở ô *Lớp mới* → **Thêm**) → **Lưu**.
+  - Mọi sinh viên của lớp được gán CVHT ngay, kể cả sinh viên thêm vào lớp sau này hoặc chuyển sang lớp này.
+  - Một lớp chỉ có một CVHT: tích lớp đang thuộc CVHT khác thì lớp chuyển sang CVHT này (hộp thoại ghi *Sẽ chuyển từ …*).
+  - Bỏ tích lớp: sinh viên lớp đó không còn CVHT.
+  - Dòng tài khoản ghi *Lớp: …* hoặc *Chưa phân lớp*.
+
+Vẫn có thể đổi CVHT riêng cho từng sinh viên ở *Sửa thông tin* trong hồ sơ.
 
 ### 5.9. Việc nên làm định kỳ
 

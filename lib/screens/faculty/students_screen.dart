@@ -387,6 +387,7 @@ class _StudentDialogState extends State<_StudentDialog> {
 
   List<AppUser> _advisors = [];
   List<String> _classes = [];
+  Map<String, String> _classAdvisors = {}; // lớp → CVHT đã phân
 
   @override
   void initState() {
@@ -398,11 +399,13 @@ class _StudentDialogState extends State<_StudentDialog> {
     final repo = context.read<AppState>().repo;
     final advisors = await repo.advisors();
     final classes = await repo.classNames();
+    final classAdvisors = await repo.classAdvisors();
     final code = await repo.suggestStudentCode(_enrollYear);
     if (!mounted) return;
     setState(() {
       _advisors = advisors;
-      _classes = classes;
+      _classAdvisors = classAdvisors;
+      _classes = {...classes, ...classAdvisors.keys}.toList()..sort();
       _code.text = code;
     });
   }
@@ -515,10 +518,15 @@ class _StudentDialogState extends State<_StudentDialog> {
               _classField(),
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
+                // Dựng lại khi CVHT được chọn tự động theo lớp.
+                key: ValueKey(_advisorId),
                 initialValue: _advisorId,
                 isExpanded: true,
-                decoration:
-                    const InputDecoration(labelText: 'Cố vấn học tập'),
+                decoration: InputDecoration(
+                    labelText: 'Cố vấn học tập',
+                    helperText: _classAdvisors.containsKey(_className.text.trim())
+                        ? 'Theo lớp đã phân cho CVHT'
+                        : null),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('Chưa phân công')),
                   for (final a in _advisors)
@@ -576,6 +584,16 @@ class _StudentDialogState extends State<_StudentDialog> {
     );
   }
 
+  /// Lớp đã được phân cho CVHT thì chọn sẵn CVHT đó.
+  void _setClass(String v) {
+    _className.text = v;
+    final a = _classAdvisors[v.trim()];
+    // Chỉ chọn khi CVHT còn trong danh sách (đã khóa thì dropdown không có).
+    if (a != null && a != _advisorId && _advisors.any((x) => x.id == a)) {
+      setState(() => _advisorId = a);
+    }
+  }
+
   Widget _classField() {
     return Autocomplete<String>(
       optionsBuilder: (value) {
@@ -597,10 +615,10 @@ class _StudentDialogState extends State<_StudentDialog> {
             labelText: 'Lớp (vd QTTH 01)',
             hintText: 'Chọn lớp có sẵn hoặc nhập lớp mới',
           ),
-          onChanged: (v) => _className.text = v,
+          onChanged: _setClass,
         );
       },
-      onSelected: (v) => _className.text = v,
+      onSelected: _setClass,
     );
   }
 }

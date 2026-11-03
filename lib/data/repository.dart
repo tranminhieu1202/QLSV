@@ -442,6 +442,62 @@ class Repository {
     return set.toList()..sort();
   }
 
+  /// Lớp → CVHT đang phụ trách (bảng class_advisors). Rỗng nếu máy chủ chưa
+  /// chạy migration phân lớp.
+  Future<Map<String, String>> classAdvisors() async {
+    try {
+      final rows = await _sb.from('class_advisors').select();
+      return {
+        for (final r in _rows(rows))
+          r['class_name'] as String: r['advisor_id'] as String
+      };
+    } on PostgrestException {
+      return {};
+    }
+  }
+
+  /// Quản trị phân các lớp [classes] cho CVHT [advisor]; các lớp CVHT này đang
+  /// phụ trách mà không có trong [classes] thì bỏ gán. Máy chủ (trigger) tự cập
+  /// nhật CVHT cho mọi sinh viên của các lớp đó.
+  Future<String?> setAdvisorClasses(
+      AppUser advisor, Set<String> classes, AppUser actor) async {
+    try {
+      final current = await classAdvisors();
+      final removed = [
+        for (final e in current.entries)
+          if (e.value == advisor.id && !classes.contains(e.key)) e.key
+      ];
+      if (removed.isNotEmpty) {
+        await _sb.from('class_advisors').delete().inFilter('class_name', removed);
+      }
+      final added = [
+        for (final c in classes)
+          if (current[c] != advisor.id) c
+      ];
+      if (added.isNotEmpty) {
+        await _sb.from('class_advisors').upsert([
+          for (final c in added)
+            {
+              'class_name': c,
+              'advisor_id': advisor.id,
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            }
+        ]);
+      }
+      if (added.isEmpty && removed.isEmpty) return null;
+      await addAudit(actor, 'Phân lớp cho CVHT',
+          '${advisor.fullName}: ${classes.isEmpty ? 'không phụ trách lớp nào' : (classes.toList()..sort()).join(', ')}');
+      invalidateCaches();
+      return null;
+    } on PostgrestException catch (e) {
+      if (e.code == '42P01' || e.code == 'PGRST205') {
+        return 'Máy chủ chưa có bảng phân lớp: chạy migration '
+            '20261103090015_class_advisors.sql trên Supabase.';
+      }
+      return 'Không lưu được: ${e.message}';
+    }
+  }
+
   /// Sinh mã số sinh viên kế tiếp cho một năm nhập học, theo dạng của trường:
   /// 2 số cuối năm + '01' + số thứ tự 4 chữ số (vd 26011102).
   Future<String> suggestStudentCode(int enrollYear) async {

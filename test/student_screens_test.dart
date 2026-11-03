@@ -11,6 +11,7 @@ import 'package:qlgd_edu/models/enrollment.dart';
 import 'package:qlgd_edu/models/student.dart';
 import 'package:qlgd_edu/models/user.dart';
 import 'package:qlgd_edu/providers/app_state.dart';
+import 'package:qlgd_edu/screens/faculty/accounts_screen.dart';
 import 'package:qlgd_edu/screens/faculty/graduation_screen.dart';
 import 'package:qlgd_edu/screens/student/student_courses_screen.dart';
 import 'package:qlgd_edu/theme/app_theme.dart';
@@ -72,6 +73,18 @@ final _enrollments = [
 
 class _FakeRepo extends Repository {
   _FakeRepo(super.sb);
+
+  @override
+  Future<List<AppUser>> facultyAccounts() async => const [
+    AppUser(id: 'a1', username: 'appreview', role: UserRole.advisor,
+        fullName: 'App Review'),
+    AppUser(id: 'a2', username: 'cvht2', role: UserRole.advisor,
+        fullName: 'Cố vấn Hai'),
+  ];
+  @override
+  Future<Map<String, String>> classAdvisors() async => {'QTTH1': 'a2'};
+  @override
+  Future<List<String>> classNames() async => ['QTTH1', 'QTTH2'];
 
   @override
   Future<Student?> studentByCode(String code) async => _student;
@@ -183,5 +196,21 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Xét điều kiện tốt nghiệp'), findsOneWidget);
     expect(find.text('Chưa đủ'), findsWidgets);
+  });
+
+  testWidgets('màn Tài khoản: phân lớp cho CVHT', (tester) async {
+    await _pump(tester, const AccountsScreen(), UserRole.admin);
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining('Lớp: QTTH1'), findsOneWidget);
+    expect(find.textContaining('Chưa phân lớp'), findsOneWidget);
+    await tester.tap(find.text('Phân lớp').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Phân lớp cho App Review'), findsOneWidget);
+    expect(find.text('Đang thuộc Cố vấn Hai'), findsOneWidget);
+    await tester.tap(find.text('QTTH1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sẽ chuyển từ Cố vấn Hai'), findsOneWidget);
+    expect(find.text('Lưu (1 lớp)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
